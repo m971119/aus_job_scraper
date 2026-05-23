@@ -1,6 +1,6 @@
 from sqlmodel import SQLModel, Field
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class Job(SQLModel, table=True):
@@ -15,5 +15,5 @@ class Job(SQLModel, table=True):
     salary_range: Optional[str] = None
     listed_dates: str = Field(default="[]")  # JSON array of date strings
     is_repost: bool = Field(default=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
