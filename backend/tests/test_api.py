@@ -61,6 +61,36 @@ def test_get_jobs_location_filter():
     assert all("sydney" in (j["city"] or "").lower() for j in data)
 
 
+def test_get_job_by_id():
+    with Session(engine) as s:
+        job = Job(
+            seek_url="https://seek.com.au/job/555",
+            title="Backend Dev",
+            company="Acme",
+            state="VIC",
+            city="Melbourne",
+            description="Great role.",
+            listed_dates=json.dumps(["2026-05-24"]),
+        )
+        s.add(job)
+        s.commit()
+        s.refresh(job)
+        job_id = job.id
+
+    resp = client.get(f"/api/jobs/{job_id}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["title"] == "Backend Dev"
+    assert data["company"] == "Acme"
+    assert data["description"] == "Great role."
+    assert isinstance(data["listed_dates"], list)
+
+
+def test_get_job_by_id_not_found():
+    resp = client.get("/api/jobs/99999")
+    assert resp.status_code == 404
+
+
 def test_get_jobs_returns_listed_dates_as_list():
     with Session(engine) as s:
         s.add(Job(

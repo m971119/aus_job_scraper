@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Job } from "@/types";
 
 interface Props {
@@ -11,14 +12,12 @@ export default function JobCard({ job }: Props) {
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <a
-            href={job.seek_url}
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            href={`/jobs/${job.id}`}
             className="text-primary font-semibold text-lg hover:underline truncate block"
           >
             {job.title}
-          </a>
+          </Link>
           {job.company && (
             <p className="text-navy font-medium mt-0.5">{job.company}</p>
           )}

@@ -1,6 +1,6 @@
 import json
 from typing import Optional
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 from database import engine
 from models import Job
@@ -38,19 +38,28 @@ def list_jobs(
             or (j.suburb and loc in j.suburb.lower())
         ]
 
-    return [
-        JobOut(
-            id=j.id,
-            seek_url=j.seek_url,
-            title=j.title,
-            company=j.company,
-            description=j.description,
-            state=j.state,
-            city=j.city,
-            suburb=j.suburb,
-            salary_range=j.salary_range,
-            listed_dates=json.loads(j.listed_dates),
-            is_repost=j.is_repost,
-        )
-        for j in jobs
-    ]
+    return [_to_out(j) for j in jobs]
+
+
+@router.get("/jobs/{job_id}", response_model=JobOut)
+def get_job(job_id: int, session: Session = Depends(get_session)):
+    job = session.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return _to_out(job)
+
+
+def _to_out(j: Job) -> JobOut:
+    return JobOut(
+        id=j.id,
+        seek_url=j.seek_url,
+        title=j.title,
+        company=j.company,
+        description=j.description,
+        state=j.state,
+        city=j.city,
+        suburb=j.suburb,
+        salary_range=j.salary_range,
+        listed_dates=json.loads(j.listed_dates),
+        is_repost=j.is_repost,
+    )
