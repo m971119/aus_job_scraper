@@ -26,3 +26,15 @@ def test_parse_location_empty_string():
 def test_parse_location_nsw():
     result = parse_location("Sydney CBD NSW 2000")
     assert result["state"] == "NSW"
+
+
+def test_parse_location_city_suburb():
+    result = parse_location("CBD Melbourne VIC 3000")
+    assert result["suburb"] == "CBD"
+    assert result["city"] == "Melbourne"
+
+
+def test_parse_location_city_only():
+    result = parse_location("Sydney NSW")
+    assert result["city"] == "Sydney"
+    assert result["suburb"] is None

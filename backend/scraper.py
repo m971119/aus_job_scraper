@@ -18,8 +18,8 @@ def parse_location(location_text: str) -> dict:
     state = next((s for s in au_states if s in location_text.upper()), None)
     parts = [p.strip() for p in location_text.split() if p.strip()]
     filtered = [p for p in parts if p.upper() not in au_states and not re.match(r"^\d{4}$", p)]
-    city = filtered[0] if filtered else None
-    suburb = filtered[1] if len(filtered) > 1 else None
+    suburb = filtered[0] if len(filtered) >= 2 else None
+    city = filtered[1] if len(filtered) >= 2 else (filtered[0] if filtered else None)
     return {"state": state, "city": city, "suburb": suburb}
 
 

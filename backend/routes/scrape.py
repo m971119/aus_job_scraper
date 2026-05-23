@@ -1,4 +1,3 @@
-import asyncio
 import json
 from datetime import datetime, timezone
 from fastapi import APIRouter
@@ -12,8 +11,8 @@ router = APIRouter()
 
 
 @router.post("/scrape", response_model=ScrapeResponse)
-def trigger_scrape(req: ScrapeRequest):
-    scraped = asyncio.run(scrape_seek(req.keywords, req.location, req.max_pages))
+async def trigger_scrape(req: ScrapeRequest):
+    scraped = await scrape_seek(req.keywords, req.location, req.max_pages)
 
     inserted = 0
     updated = 0
