@@ -13,3 +13,9 @@ dependencies = [
     "sqlmodel>=0.0.38",
     "uvicorn[standard]>=0.47.0",
 ]
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests as integration tests (live network)",
+]
+asyncio_mode = "auto"
