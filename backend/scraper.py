@@ -43,19 +43,21 @@ async def scrape_seek(keywords: str, location: str, max_pages: int = 3) -> list[
 
             for card in job_cards:
                 try:
-                    title_el = await card.query_selector("a[data-testid='job-title']")
+                    title_el = await card.query_selector("a[data-testid='job-card-title']")
                     title = await title_el.inner_text() if title_el else None
                     href = await title_el.get_attribute("href") if title_el else None
-                    seek_url = f"{SEEK_BASE}{href}" if href and href.startswith("/") else href
+                    # Strip tracking query params to get canonical job URL
+                    clean_path = href.split("?")[0] if href else None
+                    seek_url = f"{SEEK_BASE}{clean_path}" if clean_path and clean_path.startswith("/") else clean_path
 
-                    company_el = await card.query_selector("[data-testid='job-card-company-name']")
+                    company_el = await card.query_selector("a[data-automation='jobCompany']")
                     company = await company_el.inner_text() if company_el else None
 
-                    location_el = await card.query_selector("[data-testid='job-card-location']")
-                    location_text = await location_el.inner_text() if location_el else ""
+                    loc_els = await card.query_selector_all("[data-automation='jobLocation']")
+                    location_text = " ".join([await e.inner_text() for e in loc_els])
                     loc = parse_location(location_text)
 
-                    salary_el = await card.query_selector("[data-testid='job-card-pay']")
+                    salary_el = await card.query_selector("[data-automation='jobSalary']")
                     salary_range = await salary_el.inner_text() if salary_el else None
 
                     if title and seek_url:
@@ -76,9 +78,7 @@ async def scrape_seek(keywords: str, location: str, max_pages: int = 3) -> list[
         for job in results:
             try:
                 await page.goto(job.seek_url, wait_until="domcontentloaded")
-                desc_el = await page.query_selector("[data-testid='job-detail-overview']")
-                if not desc_el:
-                    desc_el = await page.query_selector(".job-detail-overview")
+                desc_el = await page.query_selector("[data-automation='jobAdDetails']")
                 if desc_el:
                     job.description = (await desc_el.inner_text()).strip()
             except Exception:

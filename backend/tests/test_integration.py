@@ -33,21 +33,23 @@ def test_scrape_and_retrieve():
     })
     assert resp.status_code == 200
     data = resp.json()
-    assert "scraped" in data
-    assert "inserted" in data
-    assert data["scraped"] >= 0
+    assert data["scraped"] >= 1, "Expected at least 1 job scraped"
+    assert data["inserted"] >= 1
 
     jobs_resp = client.get("/api/jobs")
     assert jobs_resp.status_code == 200
     jobs = jobs_resp.json()
-    assert isinstance(jobs, list)
-    if jobs:
-        j = jobs[0]
-        assert "title" in j
-        assert "seek_url" in j
-        assert "seek.com.au" in j["seek_url"]
-        assert isinstance(j["listed_dates"], list)
-        assert len(j["listed_dates"]) >= 1
+    assert len(jobs) >= 1
+
+    j = jobs[0]
+    assert j["title"], "title should be non-empty"
+    assert j["seek_url"], "seek_url should be non-empty"
+    assert "seek.com.au" in j["seek_url"]
+    assert "?" not in j["seek_url"], "seek_url should have no tracking query params"
+    assert j["company"], "company should be non-empty"
+    assert j["state"], "state should be non-empty"
+    assert isinstance(j["listed_dates"], list)
+    assert len(j["listed_dates"]) >= 1
 
 
 def test_repost_detection():
