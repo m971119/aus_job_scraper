@@ -23,19 +23,19 @@ export default function SearchForm({ onScrape, loading }: Props) {
         value={keywords}
         onChange={(e) => setKeywords(e.target.value)}
         required
-        className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#209dd7]"
+        className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
       />
       <input
         type="text"
         placeholder="Location (e.g. Melbourne VIC)"
         value={location}
         onChange={(e) => setLocation(e.target.value)}
-        className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#209dd7]"
+        className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
       />
       <button
         type="submit"
         disabled={loading}
-        className="px-6 py-2 bg-[#753991] text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+        className="px-6 py-2 bg-secondary text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
       >
         {loading ? "Scraping..." : "Scrape Seek"}
       </button>
