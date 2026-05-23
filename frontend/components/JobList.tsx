@@ -3,6 +3,11 @@ import { useState } from "react";
 import { Job } from "@/types";
 import JobCard from "./JobCard";
 
+type SortOrder = "latest" | "oldest" | "none";
+
+const latestDate = (job: Job) =>
+  job.listed_dates.length ? job.listed_dates.reduce((a, b) => (a > b ? a : b)) : "";
+
 interface Props {
   jobs: Job[];
 }
@@ -10,6 +15,7 @@ interface Props {
 export default function JobList({ jobs }: Props) {
   const [keyword, setKeyword] = useState("");
   const [location, setLocation] = useState("");
+  const [sort, setSort] = useState<SortOrder>("latest");
 
   const filtered = jobs.filter((job) => {
     const kw = keyword.toLowerCase();
@@ -24,6 +30,13 @@ export default function JobList({ jobs }: Props) {
       (job.state?.toLowerCase().includes(loc) ?? false) ||
       (job.suburb?.toLowerCase().includes(loc) ?? false);
     return matchKw && matchLoc;
+  });
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (sort === "none") return 0;
+    const da = latestDate(a);
+    const db = latestDate(b);
+    return sort === "latest" ? db.localeCompare(da) : da.localeCompare(db);
   });
 
   return (
@@ -43,20 +56,29 @@ export default function JobList({ jobs }: Props) {
           onChange={(e) => setLocation(e.target.value)}
           className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
         />
+        <select
+          value={sort}
+          onChange={(e) => setSort(e.target.value as SortOrder)}
+          className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm text-gray-700 bg-white"
+        >
+          <option value="latest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="none">Default order</option>
+        </select>
       </div>
 
-      {filtered.length === 0 ? (
+      {sorted.length === 0 ? (
         <p className="text-muted text-center py-12">No jobs found.</p>
       ) : (
         <div className="grid gap-4">
-          {filtered.map((job) => (
+          {sorted.map((job) => (
             <JobCard key={job.id} job={job} />
           ))}
         </div>
       )}
 
       <p className="text-xs text-muted mt-4 text-right">
-        {filtered.length} of {jobs.length} jobs
+        {sorted.length} of {jobs.length} jobs
       </p>
     </div>
   );
