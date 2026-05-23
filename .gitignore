@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+htmlcov/
+
+# Playwright
+backend/playwright-storage/
+
+# Node
+frontend/node_modules/
+frontend/.next/
+frontend/.env*.local
+
+# DB
+*.sqlite
+*.db
+data/
+
+# Env
+.env
+
+# OS
+.DS_Store
+Thumbs.db
