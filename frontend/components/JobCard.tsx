@@ -45,6 +45,15 @@ export default function JobCard({ job }: Props) {
           </span>
         ))}
       </div>
+
+      <div className="mt-4 pt-4 border-t border-gray-100">
+        <Link
+          href={`/jobs/${job.id}`}
+          className="inline-block text-sm font-semibold text-primary border border-primary px-3 py-1.5 rounded-lg hover:bg-primary hover:text-white transition-colors"
+        >
+          View details
+        </Link>
+      </div>
     </div>
   );
 }

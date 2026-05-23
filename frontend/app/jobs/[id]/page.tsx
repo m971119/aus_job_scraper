@@ -3,6 +3,17 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { Job } from "@/types";
 
+function BackButton() {
+  return (
+    <Link
+      href="/"
+      className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary border border-primary px-3 py-1.5 rounded-lg hover:bg-primary hover:text-white transition-colors"
+    >
+      &larr; Back to jobs
+    </Link>
+  );
+}
+
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export default function JobDetailPage({
@@ -27,9 +38,7 @@ export default function JobDetailPage({
   if (error) {
     return (
       <main className="max-w-3xl mx-auto px-4 py-10">
-        <Link href="/" className="text-primary text-sm hover:underline">
-          &larr; Back
-        </Link>
+        <BackButton />
         <p className="mt-6 text-red-500">{error}</p>
       </main>
     );
@@ -38,8 +47,8 @@ export default function JobDetailPage({
   if (!job) {
     return (
       <main className="max-w-3xl mx-auto px-4 py-10">
-        <div className="h-1 w-16 bg-accent rounded mb-6" />
-        <div className="text-muted text-sm">Loading...</div>
+        <BackButton />
+        <div className="mt-6 text-muted text-sm">Loading...</div>
       </main>
     );
   }
@@ -48,9 +57,7 @@ export default function JobDetailPage({
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-10">
-      <Link href="/" className="text-primary text-sm hover:underline">
-        &larr; Back to jobs
-      </Link>
+      <BackButton />
 
       <div className="mt-6 bg-white rounded-xl border border-gray-100 shadow-sm p-6">
         <div className="flex items-start justify-between gap-3">
