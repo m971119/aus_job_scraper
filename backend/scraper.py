@@ -1,5 +1,5 @@
 import re
-from datetime import date
+from datetime import date, timedelta
 from urllib.parse import urlencode
 from playwright.async_api import async_playwright
 from schemas import ScrapedJob
@@ -10,6 +10,15 @@ SEEK_BASE = "https://www.seek.com.au"
 def build_seek_url(keywords: str, location: str, page: int = 1) -> str:
     params = {"keywords": keywords, "where": location, "page": page}
     return f"{SEEK_BASE}/jobs?{urlencode(params)}"
+
+
+def parse_listing_date(text: str) -> str:
+    """Convert Seek relative date text (e.g. '3d ago', '12d ago•Expiring') to ISO date."""
+    clean = text.split("•")[0].strip()
+    m = re.match(r"(\d+)d ago", clean)
+    if m:
+        return (date.today() - timedelta(days=int(m.group(1)))).isoformat()
+    return date.today().isoformat()
 
 
 def parse_location(location_text: str) -> dict:
@@ -26,7 +35,6 @@ def parse_location(location_text: str) -> dict:
 async def scrape_seek(keywords: str, location: str, max_pages: int = 3) -> list[ScrapedJob]:
     """Scrape Seek job listings anonymously. Returns list of ScrapedJob."""
     results: list[ScrapedJob] = []
-    today = date.today().isoformat()
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
@@ -60,6 +68,10 @@ async def scrape_seek(keywords: str, location: str, max_pages: int = 3) -> list[
                     salary_el = await card.query_selector("[data-automation='jobSalary']")
                     salary_range = await salary_el.inner_text() if salary_el else None
 
+                    date_el = await card.query_selector("[data-automation='jobListingDate']")
+                    date_text = (await date_el.inner_text()).strip() if date_el else ""
+                    listed_date = parse_listing_date(date_text)
+
                     if title and seek_url:
                         results.append(ScrapedJob(
                             seek_url=seek_url,
@@ -69,7 +81,7 @@ async def scrape_seek(keywords: str, location: str, max_pages: int = 3) -> list[
                             city=loc["city"],
                             suburb=loc["suburb"],
                             salary_range=salary_range.strip() if salary_range else None,
-                            listed_date=today,
+                            listed_date=listed_date,
                         ))
                 except Exception:
                     continue

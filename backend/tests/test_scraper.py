@@ -1,4 +1,30 @@
-from scraper import parse_location, build_seek_url
+from datetime import date, timedelta
+from unittest.mock import patch
+from scraper import parse_location, parse_listing_date, build_seek_url
+
+
+def test_parse_listing_date_days_ago():
+    fixed = date(2026, 5, 24)
+    with patch("scraper.date") as mock_date:
+        mock_date.today.return_value = fixed
+        mock_date.side_effect = lambda *a, **kw: date(*a, **kw)
+        assert parse_listing_date("3d ago") == "2026-05-21"
+
+
+def test_parse_listing_date_with_expiring_suffix():
+    fixed = date(2026, 5, 24)
+    with patch("scraper.date") as mock_date:
+        mock_date.today.return_value = fixed
+        mock_date.side_effect = lambda *a, **kw: date(*a, **kw)
+        assert parse_listing_date("12d ago•Expiring") == "2026-05-12"
+
+
+def test_parse_listing_date_featured_falls_back_to_today():
+    fixed = date(2026, 5, 24)
+    with patch("scraper.date") as mock_date:
+        mock_date.today.return_value = fixed
+        mock_date.side_effect = lambda *a, **kw: date(*a, **kw)
+        assert parse_listing_date("Featured") == "2026-05-24"
 
 
 def test_build_seek_url_contains_seek_domain():
