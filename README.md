@@ -23,6 +23,28 @@ To debug the backend with breakpoints in Cursor or VS Code:
 
 To stop: `./scripts/stop.sh`
 
+## Database Migrations
+
+Schema changes are managed with [Alembic](https://alembic.sqlalchemy.org/). Run this whenever you pull changes that include new migrations:
+
+```bash
+./scripts/migrate.sh
+```
+
+Or directly:
+
+```bash
+cd backend && uv run alembic upgrade head
+```
+
+To check current migration status:
+
+```bash
+cd backend && uv run alembic current
+```
+
+> New databases created from scratch do not need migrations — the app creates the schema automatically on first start.
+
 ## Scripts
 
 | Script | Description |
@@ -30,3 +52,4 @@ To stop: `./scripts/stop.sh`
 | `scripts/start.sh` | Start all services via Docker Compose |
 | `scripts/stop.sh` | Stop all services |
 | `scripts/debug.sh` | Start frontend only (use debugger for backend) |
+| `scripts/migrate.sh` | Apply pending database migrations |
