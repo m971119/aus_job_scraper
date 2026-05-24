@@ -8,7 +8,7 @@ SEEK_BASE = "https://www.seek.com.au"
 
 
 def build_seek_url(keywords: str, location: str, page: int = 1) -> str:
-    params = {"keywords": keywords, "where": location, "page": page}
+    params = {"keywords": keywords, "where": location, "sortmode": "ListedDate", "page": page}
     return f"{SEEK_BASE}/jobs?{urlencode(params)}"
 
 

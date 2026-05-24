@@ -37,6 +37,11 @@ def test_build_seek_url_contains_keywords():
     assert "python" in url.lower() or "keywords" in url.lower()
 
 
+def test_build_seek_url_sorts_by_listed_date():
+    url = build_seek_url("python developer", "Melbourne VIC", page=1)
+    assert "sortmode=ListedDate" in url
+
+
 def test_parse_location_extracts_state():
     result = parse_location("CBD Melbourne VIC 3000")
     assert result["state"] == "VIC"
