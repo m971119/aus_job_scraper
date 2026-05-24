@@ -12,6 +12,24 @@ def build_seek_url(keywords: str, location: str, page: int = 1) -> str:
     return f"{SEEK_BASE}/jobs?{urlencode(params)}"
 
 
+async def detect_total_pages(page) -> int:
+    """Read total page count from Seek's pagination. Returns 1 on failure."""
+    try:
+        links = await page.query_selector_all("a[aria-label^='Page ']")
+        nums = []
+        for link in links:
+            label = await link.get_attribute("aria-label")
+            if label:
+                m = re.match(r"Page (\d+)", label)
+                if m:
+                    nums.append(int(m.group(1)))
+        if nums:
+            return max(nums)
+    except Exception:
+        pass
+    return 1
+
+
 def parse_listing_date(text: str) -> str:
     """Convert Seek relative date text (e.g. '3d ago', '12d ago•Expiring') to ISO date."""
     clean = text.split("•")[0].strip()
@@ -32,8 +50,13 @@ def parse_location(location_text: str) -> dict:
     return {"state": state, "city": city, "suburb": suburb}
 
 
-async def scrape_seek(keywords: str, location: str, max_pages: int = 3) -> list[ScrapedJob]:
-    """Scrape Seek job listings anonymously. Returns list of ScrapedJob."""
+async def scrape_seek(
+    keywords: str,
+    location: str,
+    on_progress=None,   # callable(current_page: int, total_pages: int)
+    is_cancelled=None,  # callable() -> bool
+) -> list[ScrapedJob]:
+    """Scrape all Seek pages for the given search. Detects total pages from Seek's pagination."""
     results: list[ScrapedJob] = []
 
     async with async_playwright() as p:
@@ -41,9 +64,21 @@ async def scrape_seek(keywords: str, location: str, max_pages: int = 3) -> list[
         page = await browser.new_page()
         page.set_default_timeout(20000)
 
-        for page_num in range(1, max_pages + 1):
+        total_pages = 1
+        page_num = 1
+
+        while page_num <= total_pages:
+            if is_cancelled and is_cancelled():
+                break
+
             url = build_seek_url(keywords, location, page_num)
             await page.goto(url, wait_until="domcontentloaded")
+
+            if page_num == 1:
+                total_pages = await detect_total_pages(page)
+
+            if on_progress:
+                on_progress(page_num, total_pages)
 
             job_cards = await page.query_selector_all("article[data-testid='job-card']")
             if not job_cards:
@@ -54,7 +89,6 @@ async def scrape_seek(keywords: str, location: str, max_pages: int = 3) -> list[
                     title_el = await card.query_selector("a[data-testid='job-card-title']")
                     title = await title_el.inner_text() if title_el else None
                     href = await title_el.get_attribute("href") if title_el else None
-                    # Strip tracking query params to get canonical job URL
                     clean_path = href.split("?")[0] if href else None
                     seek_url = f"{SEEK_BASE}{clean_path}" if clean_path and clean_path.startswith("/") else clean_path
 
@@ -86,7 +120,8 @@ async def scrape_seek(keywords: str, location: str, max_pages: int = 3) -> list[
                 except Exception:
                     continue
 
-        # Fetch descriptions by visiting each job page
+            page_num += 1
+
         for job in results:
             try:
                 await page.goto(job.seek_url, wait_until="domcontentloaded")
