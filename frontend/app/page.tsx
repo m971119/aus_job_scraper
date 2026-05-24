@@ -1,36 +1,93 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import SearchForm from "@/components/SearchForm";
 import JobList from "@/components/JobList";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+interface ScrapeStatus {
+  status: string;
+  current_page: number;
+  total_pages: number;
+  inserted: number;
+  updated_reposts: number;
+  skipped_hidden: number;
+  error: string | null;
+}
+
+const IDLE_STATUS: ScrapeStatus = {
+  status: "idle",
+  current_page: 0,
+  total_pages: 0,
+  inserted: 0,
+  updated_reposts: 0,
+  skipped_hidden: 0,
+  error: null,
+};
+
 export default function HomePage() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [scrapeMsg, setScrapeMsg] = useState<string | null>(null);
+  const [scrapeStatus, setScrapeStatus] = useState<ScrapeStatus>(IDLE_STATUS);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+
+  const stopPolling = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  };
+
+  const startPolling = () => {
+    stopPolling();
+    pollingRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`${API}/api/scrape/status`);
+        if (!res.ok) return;
+        const data: ScrapeStatus = await res.json();
+        setScrapeStatus(data);
+        if (data.status !== "running") {
+          stopPolling();
+          if (data.status === "done") setRefreshKey((k) => k + 1);
+        }
+      } catch {
+        // network blip — keep polling
+      }
+    }, 1000);
+  };
+
+  useEffect(() => () => stopPolling(), []);
 
   const handleScrape = async (keywords: string, location: string) => {
-    setLoading(true);
     setError(null);
-    setScrapeMsg(null);
     try {
       const res = await fetch(`${API}/api/scrape`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keywords, location, max_pages: 3 }),
+        body: JSON.stringify({ keywords, location }),
       });
+      if (res.status === 409) {
+        setError("A scrape is already running.");
+        return;
+      }
       if (!res.ok) throw new Error(`Scrape failed: ${res.status}`);
-      const data = await res.json();
-      setScrapeMsg(`Done — ${data.inserted} new, ${data.updated_reposts} reposted`);
-      setRefreshKey((k) => k + 1);
+      setScrapeStatus({ ...IDLE_STATUS, status: "running" });
+      startPolling();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Unknown error");
-    } finally {
-      setLoading(false);
     }
   };
+
+  const handleCancel = async () => {
+    await fetch(`${API}/api/scrape/cancel`, { method: "POST" });
+  };
+
+  const scrapeMsg =
+    scrapeStatus.status === "done"
+      ? `Done — ${scrapeStatus.inserted} new, ${scrapeStatus.updated_reposts} reposted`
+      : scrapeStatus.status === "error"
+      ? `Error: ${scrapeStatus.error}`
+      : null;
 
   return (
     <main className="max-w-4xl mx-auto px-4 py-10">
@@ -41,7 +98,11 @@ export default function HomePage() {
       </div>
 
       <div className="p-5 bg-white rounded-xl border border-gray-100 shadow-sm">
-        <SearchForm onScrape={handleScrape} loading={loading} />
+        <SearchForm
+          onScrape={handleScrape}
+          scrapeStatus={scrapeStatus}
+          onCancel={handleCancel}
+        />
         {error && <p className="mt-3 text-red-500 text-sm">{error}</p>}
         {scrapeMsg && <p className="mt-3 text-green-600 text-sm">{scrapeMsg}</p>}
       </div>
