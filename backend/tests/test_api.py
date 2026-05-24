@@ -161,6 +161,15 @@ def test_hide_job_excludes_from_list():
     assert "Hidden" not in titles
 
 
+def test_scrape_status_shape():
+    res = client.get("/api/scrape/status")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["status"] == "idle"
+    assert body["current_page"] == 0
+    assert body["total_pages"] == 0
+
+
 def test_hide_job_skipped_on_rescrape():
     with Session(engine) as s:
         j = Job(

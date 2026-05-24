@@ -17,7 +17,6 @@ class ScrapedJob(BaseModel):
 class ScrapeRequest(BaseModel):
     keywords: str
     location: str
-    max_pages: int = 3
 
 
 class ScrapeResponse(BaseModel):
@@ -25,6 +24,16 @@ class ScrapeResponse(BaseModel):
     inserted: int
     updated_reposts: int
     skipped_hidden: int
+
+
+class ScrapeStatus(BaseModel):
+    status: str  # "idle" | "running" | "done" | "cancelled" | "error"
+    current_page: int = 0
+    total_pages: int = 0
+    inserted: int = 0
+    updated_reposts: int = 0
+    skipped_hidden: int = 0
+    error: str | None = None
 
 
 class JobOut(BaseModel):
