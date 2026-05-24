@@ -1,14 +1,23 @@
 "use client";
 import { useState } from "react";
+import ScrapeProgress from "./ScrapeProgress";
+
+interface ScrapeStatus {
+  status: string;
+  current_page: number;
+  total_pages: number;
+}
 
 interface Props {
   onScrape: (keywords: string, location: string) => void;
-  loading: boolean;
+  scrapeStatus: ScrapeStatus;
+  onCancel: () => void;
 }
 
-export default function SearchForm({ onScrape, loading }: Props) {
+export default function SearchForm({ onScrape, scrapeStatus, onCancel }: Props) {
   const [keywords, setKeywords] = useState("");
   const [location, setLocation] = useState("");
+  const isRunning = scrapeStatus.status === "running";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,29 +25,38 @@ export default function SearchForm({ onScrape, loading }: Props) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
-      <input
-        type="text"
-        placeholder="Keywords (e.g. Python developer)"
-        value={keywords}
-        onChange={(e) => setKeywords(e.target.value)}
-        required
-        className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+    <>
+      <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
+        <input
+          type="text"
+          placeholder="Keywords (e.g. Python developer)"
+          value={keywords}
+          onChange={(e) => setKeywords(e.target.value)}
+          required
+          className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+        <input
+          type="text"
+          placeholder="Location (e.g. Melbourne VIC)"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+        <button
+          type="submit"
+          disabled={isRunning}
+          className="px-6 py-2 bg-secondary text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+        >
+          {isRunning ? "Scraping..." : "Scrape Seek"}
+        </button>
+      </form>
+
+      <ScrapeProgress
+        status={scrapeStatus.status}
+        currentPage={scrapeStatus.current_page}
+        totalPages={scrapeStatus.total_pages}
+        onCancel={onCancel}
       />
-      <input
-        type="text"
-        placeholder="Location (e.g. Melbourne VIC)"
-        value={location}
-        onChange={(e) => setLocation(e.target.value)}
-        className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-      />
-      <button
-        type="submit"
-        disabled={loading}
-        className="px-6 py-2 bg-secondary text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
-      >
-        {loading ? "Scraping..." : "Scrape Seek"}
-      </button>
-    </form>
+    </>
   );
 }
