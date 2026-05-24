@@ -9,5 +9,13 @@ export interface Job {
   suburb: string | null;
   salary_range: string | null;
   listed_dates: string[];
+  latest_listing_date: string | null;
   is_repost: boolean;
+}
+
+export interface JobsPage {
+  items: Job[];
+  total: number;
+  page: number;
+  page_size: number;
 }

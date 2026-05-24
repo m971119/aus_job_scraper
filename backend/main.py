@@ -4,7 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import create_db
 from routes import jobs, scrape
 import os
+import logging
 
+logging.basicConfig(level=logging.INFO)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

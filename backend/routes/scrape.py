@@ -28,6 +28,7 @@ async def trigger_scrape(req: ScrapeRequest):
                 if item.listed_date not in dates:
                     dates.append(item.listed_date)
                     existing.listed_dates = json.dumps(dates)
+                    existing.latest_listing_date = max(dates)
                     existing.is_repost = True
                     existing.updated_at = datetime.now(timezone.utc)
                     session.add(existing)
@@ -43,6 +44,7 @@ async def trigger_scrape(req: ScrapeRequest):
                     suburb=item.suburb,
                     salary_range=item.salary_range,
                     listed_dates=json.dumps([item.listed_date]),
+                    latest_listing_date=item.listed_date,
                     is_repost=False,
                 )
                 session.add(job)

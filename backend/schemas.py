@@ -37,6 +37,14 @@ class JobOut(BaseModel):
     suburb: Optional[str]
     salary_range: Optional[str]
     listed_dates: list[str]
+    latest_listing_date: Optional[str]
     is_repost: bool
 
     model_config = {"from_attributes": True}
+
+
+class JobsPage(BaseModel):
+    items: list[JobOut]
+    total: int
+    page: int
+    page_size: int

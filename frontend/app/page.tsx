@@ -1,25 +1,15 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import SearchForm from "@/components/SearchForm";
 import JobList from "@/components/JobList";
-import { Job } from "@/types";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export default function HomePage() {
-  const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scrapeMsg, setScrapeMsg] = useState<string | null>(null);
-
-  const fetchJobs = useCallback(async () => {
-    const res = await fetch(`${API}/api/jobs`);
-    if (res.ok) setJobs(await res.json());
-  }, []);
-
-  useEffect(() => {
-    fetchJobs();
-  }, [fetchJobs]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleScrape = async (keywords: string, location: string) => {
     setLoading(true);
@@ -34,7 +24,7 @@ export default function HomePage() {
       if (!res.ok) throw new Error(`Scrape failed: ${res.status}`);
       const data = await res.json();
       setScrapeMsg(`Done — ${data.inserted} new, ${data.updated_reposts} reposted`);
-      await fetchJobs();
+      setRefreshKey((k) => k + 1);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
@@ -57,10 +47,8 @@ export default function HomePage() {
       </div>
 
       <div className="mt-8">
-        <h2 className="text-xl font-semibold text-navy mb-4">
-          Saved Jobs ({jobs.length})
-        </h2>
-        <JobList jobs={jobs} />
+        <h2 className="text-xl font-semibold text-navy mb-4">Saved Jobs</h2>
+        <JobList refreshKey={refreshKey} />
       </div>
     </main>
   );

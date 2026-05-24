@@ -1,10 +1,11 @@
 import json
-from typing import Optional
+from typing import Literal, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlmodel import Session, select
+from sqlalchemy import or_
+from sqlmodel import Session, col, select
 from database import engine
 from models import Job
-from schemas import JobOut
+from schemas import JobOut, JobsPage
 
 router = APIRouter()
 
@@ -14,31 +15,42 @@ def get_session():
         yield session
 
 
-@router.get("/jobs", response_model=list[JobOut])
+@router.get("/jobs", response_model=JobsPage)
 def list_jobs(
     keyword: Optional[str] = Query(None),
     location: Optional[str] = Query(None),
+    sort: Literal["latest", "oldest"] = Query("latest"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
     session: Session = Depends(get_session),
 ):
-    jobs = session.exec(select(Job)).all()
+    query = select(Job)
 
     if keyword:
-        kw = keyword.lower()
-        jobs = [
-            j for j in jobs
-            if kw in j.title.lower() or (j.description and kw in j.description.lower())
-        ]
+        kw = f"%{keyword}%"
+        query = query.where(
+            or_(col(Job.title).ilike(kw), col(Job.description).ilike(kw))
+        )
 
     if location:
-        loc = location.lower()
-        jobs = [
-            j for j in jobs
-            if (j.city and loc in j.city.lower())
-            or (j.state and loc in j.state.lower())
-            or (j.suburb and loc in j.suburb.lower())
-        ]
+        loc = f"%{location}%"
+        query = query.where(
+            or_(
+                col(Job.city).ilike(loc),
+                col(Job.state).ilike(loc),
+                col(Job.suburb).ilike(loc),
+            )
+        )
 
-    return [_to_out(j) for j in jobs]
+    order = col(Job.latest_listing_date).desc() if sort == "latest" else col(Job.latest_listing_date).asc()
+    query = query.order_by(order)
+
+    all_jobs = session.exec(query).all()
+    total = len(all_jobs)
+    start = (page - 1) * page_size
+    jobs = all_jobs[start : start + page_size]
+
+    return JobsPage(items=[_to_out(j) for j in jobs], total=total, page=page, page_size=page_size)
 
 
 @router.get("/jobs/{job_id}", response_model=JobOut)
@@ -61,5 +73,6 @@ def _to_out(j: Job) -> JobOut:
         suburb=j.suburb,
         salary_range=j.salary_range,
         listed_dates=json.loads(j.listed_dates),
+        latest_listing_date=j.latest_listing_date,
         is_repost=j.is_repost,
     )

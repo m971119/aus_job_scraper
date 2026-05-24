@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 from main import app
-from database import create_db, engine
+from database import engine
 from models import Job
 
 
@@ -20,57 +20,108 @@ def clean_db():
 client = TestClient(app)
 
 
+def make_job(**kwargs) -> Job:
+    defaults = dict(
+        seek_url="https://seek.com.au/job/1",
+        title="Dev",
+        listed_dates=json.dumps(["2026-05-24"]),
+        latest_listing_date="2026-05-24",
+    )
+    return Job(**{**defaults, **kwargs})
+
+
 def test_get_jobs_empty():
     resp = client.get("/api/jobs")
     assert resp.status_code == 200
-    assert resp.json() == []
+    data = resp.json()
+    assert data["items"] == []
+    assert data["total"] == 0
 
 
 def test_get_jobs_with_keyword_filter():
     with Session(engine) as s:
-        s.add(Job(
-            seek_url="https://seek.com.au/job/999",
-            title="Python Developer",
-            city="Sydney",
-            state="NSW",
-            listed_dates=json.dumps(["2026-05-23"]),
-        ))
+        s.add(make_job(seek_url="https://seek.com.au/job/1", title="Python Developer", city="Sydney", state="NSW"))
+        s.add(make_job(seek_url="https://seek.com.au/job/2", title="Java Engineer", city="Sydney", state="NSW"))
         s.commit()
 
     resp = client.get("/api/jobs?keyword=python")
     assert resp.status_code == 200
     data = resp.json()
-    assert len(data) == 1
-    assert data[0]["title"] == "Python Developer"
+    assert data["total"] == 1
+    assert data["items"][0]["title"] == "Python Developer"
 
 
 def test_get_jobs_location_filter():
     with Session(engine) as s:
-        s.add(Job(
-            seek_url="https://seek.com.au/job/111",
-            title="Data Engineer",
-            city="Sydney",
-            state="NSW",
-            listed_dates=json.dumps(["2026-05-23"]),
-        ))
+        s.add(make_job(seek_url="https://seek.com.au/job/1", title="Dev", city="Sydney", state="NSW"))
+        s.add(make_job(seek_url="https://seek.com.au/job/2", title="Dev", city="Melbourne", state="VIC"))
         s.commit()
 
     resp = client.get("/api/jobs?location=Sydney")
     assert resp.status_code == 200
     data = resp.json()
-    assert all("sydney" in (j["city"] or "").lower() for j in data)
+    assert data["total"] == 1
+    assert data["items"][0]["city"] == "Sydney"
+
+
+def test_get_jobs_sort_latest():
+    with Session(engine) as s:
+        s.add(make_job(seek_url="https://seek.com.au/job/1", title="Old", listed_dates=json.dumps(["2026-05-01"]), latest_listing_date="2026-05-01"))
+        s.add(make_job(seek_url="https://seek.com.au/job/2", title="New", listed_dates=json.dumps(["2026-05-20"]), latest_listing_date="2026-05-20"))
+        s.commit()
+
+    resp = client.get("/api/jobs?sort=latest")
+    data = resp.json()
+    assert data["items"][0]["title"] == "New"
+    assert data["items"][1]["title"] == "Old"
+
+
+def test_get_jobs_pagination():
+    with Session(engine) as s:
+        for i in range(5):
+            s.add(make_job(seek_url=f"https://seek.com.au/job/{i}", title=f"Job {i}"))
+        s.commit()
+
+    resp = client.get("/api/jobs?page=1&page_size=2")
+    data = resp.json()
+    assert data["total"] == 5
+    assert len(data["items"]) == 2
+    assert data["page"] == 1
+    assert data["page_size"] == 2
+
+    resp2 = client.get("/api/jobs?page=3&page_size=2")
+    assert len(resp2.json()["items"]) == 1
+
+
+def test_get_jobs_returns_listed_dates_as_list():
+    with Session(engine) as s:
+        s.add(make_job(
+            seek_url="https://seek.com.au/job/222",
+            title="Frontend Dev",
+            listed_dates=json.dumps(["2026-05-22", "2026-05-23"]),
+            latest_listing_date="2026-05-23",
+            is_repost=True,
+        ))
+        s.commit()
+
+    resp = client.get("/api/jobs")
+    data = resp.json()
+    job = next(j for j in data["items"] if j["seek_url"] == "https://seek.com.au/job/222")
+    assert isinstance(job["listed_dates"], list)
+    assert len(job["listed_dates"]) == 2
+    assert job["is_repost"] is True
+    assert job["latest_listing_date"] == "2026-05-23"
 
 
 def test_get_job_by_id():
     with Session(engine) as s:
-        job = Job(
+        job = make_job(
             seek_url="https://seek.com.au/job/555",
             title="Backend Dev",
             company="Acme",
             state="VIC",
             city="Melbourne",
             description="Great role.",
-            listed_dates=json.dumps(["2026-05-24"]),
         )
         s.add(job)
         s.commit()
@@ -89,22 +140,3 @@ def test_get_job_by_id():
 def test_get_job_by_id_not_found():
     resp = client.get("/api/jobs/99999")
     assert resp.status_code == 404
-
-
-def test_get_jobs_returns_listed_dates_as_list():
-    with Session(engine) as s:
-        s.add(Job(
-            seek_url="https://seek.com.au/job/222",
-            title="Frontend Dev",
-            listed_dates=json.dumps(["2026-05-22", "2026-05-23"]),
-            is_repost=True,
-        ))
-        s.commit()
-
-    resp = client.get("/api/jobs")
-    assert resp.status_code == 200
-    data = resp.json()
-    job = next(j for j in data if j["seek_url"] == "https://seek.com.au/job/222")
-    assert isinstance(job["listed_dates"], list)
-    assert len(job["listed_dates"]) == 2
-    assert job["is_repost"] is True
