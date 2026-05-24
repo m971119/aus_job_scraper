@@ -16,5 +16,6 @@ class Job(SQLModel, table=True):
     listed_dates: str = Field(default="[]")  # JSON array of date strings
     latest_listing_date: Optional[str] = Field(default=None, index=True)
     is_repost: bool = Field(default=False)
+    is_hidden: bool = Field(default=False)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

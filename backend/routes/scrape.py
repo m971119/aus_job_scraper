@@ -16,12 +16,17 @@ async def trigger_scrape(req: ScrapeRequest):
 
     inserted = 0
     updated = 0
+    skipped_hidden = 0
 
     with Session(engine) as session:
         for item in scraped:
             existing = session.exec(
                 select(Job).where(Job.seek_url == item.seek_url)
             ).first()
+
+            if existing and existing.is_hidden:
+                skipped_hidden += 1
+                continue
 
             if existing:
                 dates = json.loads(existing.listed_dates)
@@ -52,4 +57,4 @@ async def trigger_scrape(req: ScrapeRequest):
 
         session.commit()
 
-    return ScrapeResponse(scraped=len(scraped), inserted=inserted, updated_reposts=updated)
+    return ScrapeResponse(scraped=len(scraped), inserted=inserted, updated_reposts=updated, skipped_hidden=skipped_hidden)

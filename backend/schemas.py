@@ -24,6 +24,7 @@ class ScrapeResponse(BaseModel):
     scraped: int
     inserted: int
     updated_reposts: int
+    skipped_hidden: int
 
 
 class JobOut(BaseModel):
@@ -39,6 +40,7 @@ class JobOut(BaseModel):
     listed_dates: list[str]
     latest_listing_date: Optional[str]
     is_repost: bool
+    is_hidden: bool
 
     model_config = {"from_attributes": True}
 

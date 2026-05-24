@@ -140,3 +140,47 @@ def test_get_job_by_id():
 def test_get_job_by_id_not_found():
     resp = client.get("/api/jobs/99999")
     assert resp.status_code == 404
+
+
+def test_hide_job_excludes_from_list():
+    with Session(engine) as s:
+        s.add(make_job(seek_url="https://seek.com.au/job/1", title="Visible"))
+        j = make_job(seek_url="https://seek.com.au/job/2", title="Hidden")
+        s.add(j)
+        s.commit()
+        s.refresh(j)
+        job_id = j.id
+
+    resp = client.patch(f"/api/jobs/{job_id}/hide")
+    assert resp.status_code == 200
+    assert resp.json()["is_hidden"] is True
+
+    list_resp = client.get("/api/jobs")
+    titles = [j["title"] for j in list_resp.json()["items"]]
+    assert "Visible" in titles
+    assert "Hidden" not in titles
+
+
+def test_hide_job_skipped_on_rescrape():
+    with Session(engine) as s:
+        j = Job(
+            seek_url="https://seek.com.au/job/hidden",
+            title="Old Job",
+            listed_dates='["2026-05-01"]',
+            latest_listing_date="2026-05-01",
+            is_hidden=True,
+        )
+        s.add(j)
+        s.commit()
+
+    from schemas import ScrapedJob
+    from unittest.mock import patch
+
+    fake = [ScrapedJob(seek_url="https://seek.com.au/job/hidden", title="Old Job", listed_date="2026-05-24")]
+    with patch("routes.scrape.scrape_seek", return_value=fake):
+        resp = client.post("/api/scrape", json={"keywords": "x", "location": "y", "max_pages": 1})
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["inserted"] == 0
+    assert data["skipped_hidden"] == 1

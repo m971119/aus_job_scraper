@@ -3,9 +3,10 @@ import { Job } from "@/types";
 
 interface Props {
   job: Job;
+  onHide?: (id: number) => void;
 }
 
-export default function JobCard({ job }: Props) {
+export default function JobCard({ job, onHide }: Props) {
   const location = [job.suburb, job.city, job.state].filter(Boolean).join(", ");
 
   return (
@@ -46,13 +47,21 @@ export default function JobCard({ job }: Props) {
         ))}
       </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-100">
+      <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
         <Link
           href={`/jobs/${job.id}`}
           className="inline-block text-sm font-semibold text-primary border border-primary px-3 py-1.5 rounded-lg hover:bg-primary hover:text-white transition-colors"
         >
           View details
         </Link>
+        {onHide && (
+          <button
+            onClick={() => onHide(job.id)}
+            className="text-xs text-muted hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50"
+          >
+            Not interested
+          </button>
+        )}
       </div>
     </div>
   );

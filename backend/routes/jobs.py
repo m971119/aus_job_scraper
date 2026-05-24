@@ -24,7 +24,7 @@ def list_jobs(
     page_size: int = Query(25, ge=1, le=100),
     session: Session = Depends(get_session),
 ):
-    query = select(Job)
+    query = select(Job).where(Job.is_hidden == False)  # noqa: E712
 
     if keyword:
         kw = f"%{keyword}%"
@@ -61,6 +61,18 @@ def get_job(job_id: int, session: Session = Depends(get_session)):
     return _to_out(job)
 
 
+@router.patch("/jobs/{job_id}/hide", response_model=JobOut)
+def hide_job(job_id: int, session: Session = Depends(get_session)):
+    job = session.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    job.is_hidden = True
+    session.add(job)
+    session.commit()
+    session.refresh(job)
+    return _to_out(job)
+
+
 def _to_out(j: Job) -> JobOut:
     return JobOut(
         id=j.id,
@@ -75,4 +87,5 @@ def _to_out(j: Job) -> JobOut:
         listed_dates=json.loads(j.listed_dates),
         latest_listing_date=j.latest_listing_date,
         is_repost=j.is_repost,
+        is_hidden=j.is_hidden,
     )

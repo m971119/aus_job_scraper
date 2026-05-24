@@ -37,6 +37,11 @@ export default function JobList({ refreshKey }: Props) {
 
   const totalPages = Math.max(1, Math.ceil(data.total / pageSize));
 
+  const handleHide = async (id: number) => {
+    setData((prev) => ({ ...prev, items: prev.items.filter((j) => j.id !== id), total: prev.total - 1 }));
+    await fetch(`${API}/api/jobs/${id}/hide`, { method: "PATCH" });
+  };
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -85,7 +90,7 @@ export default function JobList({ refreshKey }: Props) {
       ) : (
         <div className="grid gap-4">
           {data.items.map((job) => (
-            <JobCard key={job.id} job={job} />
+            <JobCard key={job.id} job={job} onHide={handleHide} />
           ))}
         </div>
       )}

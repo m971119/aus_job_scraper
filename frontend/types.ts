@@ -11,6 +11,7 @@ export interface Job {
   listed_dates: string[];
   latest_listing_date: string | null;
   is_repost: boolean;
+  is_hidden: boolean;
 }
 
 export interface JobsPage {
