@@ -1,6 +1,7 @@
 "use client";
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Job } from "@/types";
 
 function BackButton() {
@@ -22,8 +23,14 @@ export default function JobDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
   const [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const handleHide = async () => {
+    await fetch(`${API}/api/jobs/${id}/hide`, { method: "PATCH" });
+    router.push("/");
+  };
 
   useEffect(() => {
     fetch(`${API}/api/jobs/${id}`)
@@ -111,7 +118,7 @@ export default function JobDetailPage({
           )}
         </div>
 
-        <div className="mt-6">
+        <div className="mt-6 flex items-center gap-3">
           <a
             href={job.seek_url}
             target="_blank"
@@ -120,6 +127,12 @@ export default function JobDetailPage({
           >
             View on Seek &rarr;
           </a>
+          <button
+            onClick={handleHide}
+            className="text-sm text-muted hover:text-red-500 transition-colors px-3 py-2 rounded-lg hover:bg-red-50"
+          >
+            Not interested
+          </button>
         </div>
       </div>
     </main>
