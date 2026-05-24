@@ -170,10 +170,44 @@ def test_scrape_status_shape():
     assert body["total_pages"] == 0
 
 
-def test_hide_job_skipped_on_rescrape():
+def test_scrape_status_idle_on_startup():
+    res = client.get("/api/scrape/status")
+    assert res.status_code == 200
+    assert res.json()["status"] == "idle"
+
+
+def test_scrape_cancel_when_idle_returns_200():
+    res = client.post("/api/scrape/cancel")
+    assert res.status_code == 200
+
+
+def test_scrape_returns_202(monkeypatch):
+    async def fake_scrape(*args, **kwargs):
+        return []
+    monkeypatch.setattr("routes.scrape.scrape_seek", fake_scrape)
+    res = client.post("/api/scrape", json={"keywords": "python", "location": "Sydney"})
+    assert res.status_code == 202
+
+
+def test_scrape_returns_409_when_already_running():
+    import routes.scrape as scrape_module
+    scrape_module._state["status"] = "running"
+    try:
+        res = client.post("/api/scrape", json={"keywords": "python", "location": "Sydney"})
+        assert res.status_code == 409
+    finally:
+        scrape_module._state["status"] = "idle"
+
+
+@pytest.mark.asyncio
+async def test_hidden_job_skipped_on_rescrape():
+    from schemas import ScrapedJob, ScrapeRequest
+    from unittest.mock import AsyncMock, patch
+    import routes.scrape as scrape_module
+
     with Session(engine) as s:
         j = Job(
-            seek_url="https://seek.com.au/job/hidden",
+            seek_url="https://seek.com.au/job/hidden-async",
             title="Old Job",
             listed_dates='["2026-05-01"]',
             latest_listing_date="2026-05-01",
@@ -182,14 +216,11 @@ def test_hide_job_skipped_on_rescrape():
         s.add(j)
         s.commit()
 
-    from schemas import ScrapedJob
-    from unittest.mock import patch
+    fake = [ScrapedJob(seek_url="https://seek.com.au/job/hidden-async", title="Old Job", listed_date="2026-05-24")]
+    scrape_module._reset_state()
 
-    fake = [ScrapedJob(seek_url="https://seek.com.au/job/hidden", title="Old Job", listed_date="2026-05-24")]
-    with patch("routes.scrape.scrape_seek", return_value=fake):
-        resp = client.post("/api/scrape", json={"keywords": "x", "location": "y", "max_pages": 1})
+    with patch("routes.scrape.scrape_seek", new=AsyncMock(return_value=fake)):
+        await scrape_module._run_scrape(ScrapeRequest(keywords="x", location="y"))
 
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["inserted"] == 0
-    assert data["skipped_hidden"] == 1
+    assert scrape_module._state["skipped_hidden"] == 1
+    assert scrape_module._state["inserted"] == 0
