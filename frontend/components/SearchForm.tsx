@@ -12,9 +12,10 @@ interface Props {
   onScrape: (keywords: string, location: string) => void;
   scrapeStatus: ScrapeStatus;
   onCancel: () => void;
+  countdown: number;
 }
 
-export default function SearchForm({ onScrape, scrapeStatus, onCancel }: Props) {
+export default function SearchForm({ onScrape, scrapeStatus, onCancel, countdown }: Props) {
   const [keywords, setKeywords] = useState("");
   const [location, setLocation] = useState("");
   const isRunning = scrapeStatus.status === "running";
@@ -56,6 +57,7 @@ export default function SearchForm({ onScrape, scrapeStatus, onCancel }: Props) 
         currentPage={scrapeStatus.current_page}
         totalPages={scrapeStatus.total_pages}
         onCancel={onCancel}
+        countdown={countdown}
       />
     </>
   );

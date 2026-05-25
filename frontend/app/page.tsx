@@ -25,33 +25,52 @@ const IDLE_STATUS: ScrapeStatus = {
   error: null,
 };
 
+const POLL_INTERVAL = 10;
+
 export default function HomePage() {
   const [scrapeStatus, setScrapeStatus] = useState<ScrapeStatus>(IDLE_STATUS);
   const [refreshKey, setRefreshKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(0);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownRef = useRef(0);
 
   const stopPolling = () => {
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
       pollingRef.current = null;
     }
+    setCountdown(0);
+  };
+
+  const doPoll = async () => {
+    try {
+      const res = await fetch(`${API}/api/scrape/status`);
+      if (!res.ok) return;
+      const data: ScrapeStatus = await res.json();
+      setScrapeStatus(data);
+      if (data.status !== "running") {
+        stopPolling();
+        if (data.status === "done") setRefreshKey((k) => k + 1);
+      }
+    } catch {
+      // network blip — keep polling
+    }
   };
 
   const startPolling = () => {
     stopPolling();
-    pollingRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`${API}/api/scrape/status`);
-        if (!res.ok) return;
-        const data: ScrapeStatus = await res.json();
-        setScrapeStatus(data);
-        if (data.status !== "running") {
-          stopPolling();
-          if (data.status === "done") setRefreshKey((k) => k + 1);
-        }
-      } catch {
-        // network blip — keep polling
+    doPoll();
+    countdownRef.current = POLL_INTERVAL;
+    setCountdown(POLL_INTERVAL);
+    pollingRef.current = setInterval(() => {
+      countdownRef.current -= 1;
+      if (countdownRef.current <= 0) {
+        countdownRef.current = POLL_INTERVAL;
+        setCountdown(POLL_INTERVAL);
+        doPoll();
+      } else {
+        setCountdown(countdownRef.current);
       }
     }, 1000);
   };
@@ -102,6 +121,7 @@ export default function HomePage() {
           onScrape={handleScrape}
           scrapeStatus={scrapeStatus}
           onCancel={handleCancel}
+          countdown={countdown}
         />
         {error && <p className="mt-3 text-red-500 text-sm">{error}</p>}
         {scrapeMsg && <p className="mt-3 text-green-600 text-sm">{scrapeMsg}</p>}

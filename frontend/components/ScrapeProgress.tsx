@@ -3,9 +3,10 @@ interface Props {
   currentPage: number;
   totalPages: number;
   onCancel: () => void;
+  countdown: number;
 }
 
-export default function ScrapeProgress({ status, currentPage, totalPages, onCancel }: Props) {
+export default function ScrapeProgress({ status, currentPage, totalPages, onCancel, countdown }: Props) {
   if (status === "idle") return null;
 
   const isRunning = status === "running";
@@ -28,7 +29,12 @@ export default function ScrapeProgress({ status, currentPage, totalPages, onCanc
   return (
     <div className="mt-3 space-y-2">
       <div className="flex items-center justify-between text-sm text-[#888888]">
-        <span>{label}</span>
+        <span>
+          {label}
+          {isRunning && countdown > 0 && (
+            <span className="ml-2 text-xs text-[#888888]">— next update in {countdown}s</span>
+          )}
+        </span>
         {isRunning && (
           <button
             onClick={onCancel}
