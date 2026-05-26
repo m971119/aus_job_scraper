@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
@@ -8,6 +9,7 @@ from schemas import ScrapeRequest, ScrapeStatus
 from scraper import scrape_seek
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 _state: dict = {
     "status": "idle",
@@ -66,6 +68,9 @@ async def _run_scrape(req: ScrapeRequest) -> None:
 
         with Session(engine) as session:
             for scraped in jobs:
+                if _state["cancel_requested"]:
+                    _state["status"] = "cancelled"
+                    return
                 existing = session.exec(
                     select(Job).where(Job.seek_url == scraped.seek_url)
                 ).first()
@@ -104,6 +109,7 @@ async def _run_scrape(req: ScrapeRequest) -> None:
         _state["status"] = "done"
 
     except Exception as exc:
+        logger.exception("Scrape failed: %s", exc)
         _state["status"] = "error"
         _state["error"] = str(exc)
 
