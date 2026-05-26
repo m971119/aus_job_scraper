@@ -43,18 +43,11 @@ export default function JobCard({ job, allTags, onHide }: Props) {
             <p className="text-navy font-medium mt-0.5">{job.company}</p>
           )}
         </div>
-        <div className="flex shrink-0 gap-1.5">
-          {job.is_repost && (
-            <span className="text-xs font-semibold px-2 py-1 rounded-full bg-accent/20 text-accent border border-accent/40">
-              Reposted
-            </span>
-          )}
-          {job.tags?.some((t) => t.name.toLowerCase() === "interested") && (
-            <span className="text-xs font-semibold px-2 py-1 rounded-full bg-primary/15 text-primary border border-primary/30">
-              Interested
-            </span>
-          )}
-        </div>
+        {job.is_repost && (
+          <span className="shrink-0 text-xs font-semibold px-2 py-1 rounded-full bg-accent/20 text-accent border border-accent/40">
+            Reposted
+          </span>
+        )}
       </div>
 
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
@@ -64,6 +57,64 @@ export default function JobCard({ job, allTags, onHide }: Props) {
 
       {job.description && (
         <p className="mt-3 text-sm text-gray-600 line-clamp-3">{job.description}</p>
+      )}
+
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        {tags.map((tag) => (
+          <span
+            key={tag.id}
+            className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20"
+          >
+            {tag.name}
+            <button
+              onClick={() => removeTag(tag)}
+              className="ml-0.5 hover:text-red-500 transition-colors leading-none"
+              aria-label={`Remove ${tag.name}`}
+            >
+              &times;
+            </button>
+          </span>
+        ))}
+        <button
+          onClick={() => setPanelOpen((o) => !o)}
+          aria-label="Add tag"
+          className={`w-5 h-5 rounded-full border text-sm flex items-center justify-center transition-colors ${
+            panelOpen
+              ? "border-primary bg-primary/10 text-primary"
+              : "border-gray-300 text-muted hover:border-primary hover:text-primary"
+          }`}
+        >
+          +
+        </button>
+      </div>
+
+      {panelOpen && (
+        <div className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
+            All tags — click to add or remove
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {allTags.map((tag) =>
+              appliedIds.has(tag.id) ? (
+                <button
+                  key={tag.id}
+                  onClick={() => removeTag(tag)}
+                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
+                >
+                  {tag.name} &times;
+                </button>
+              ) : (
+                <button
+                  key={tag.id}
+                  onClick={() => addTag(tag)}
+                  className="text-xs px-2.5 py-1 rounded-full bg-white text-gray-500 border border-gray-200 hover:border-primary hover:text-primary transition-colors"
+                >
+                  {tag.name}
+                </button>
+              )
+            )}
+          </div>
+        </div>
       )}
 
       <div className="mt-3 flex flex-wrap gap-1">
