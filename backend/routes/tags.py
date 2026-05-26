@@ -8,11 +8,6 @@ from schemas import TagCreate, TagOut
 router = APIRouter()
 
 
-def _get_tags_for_job(session: Session, job_id: int) -> list[Tag]:
-    rows = session.exec(select(Tag).join(JobTag).where(JobTag.job_id == job_id)).all()
-    return list(rows)
-
-
 @router.get("/tags", response_model=list[TagOut])
 def list_tags():
     with Session(engine) as s:
