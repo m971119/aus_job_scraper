@@ -25,6 +25,8 @@ export default function ScrapeProgress({
 
   if (status === "done") {
     lines.push("Scrape complete");
+    if (jobsScraped > 0) lines.push(`${jobsScraped} jobs scraped from seek`);
+    if (jobsCompared > 0) lines.push(`${jobsCompared} jobs compared`);
   } else if (status === "cancelled") {
     lines.push("Scrape cancelled");
   } else if (status === "error") {
