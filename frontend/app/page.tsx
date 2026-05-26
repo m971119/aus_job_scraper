@@ -29,7 +29,7 @@ const IDLE_STATUS: ScrapeStatus = {
   error: null,
 };
 
-const POLL_INTERVAL = 10;
+const POLL_INTERVAL = 3;
 
 export default function HomePage() {
   const [scrapeStatus, setScrapeStatus] = useState<ScrapeStatus>(IDLE_STATUS);
