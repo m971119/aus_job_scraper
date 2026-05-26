@@ -59,7 +59,7 @@ async def scrape_seek(
             await page.goto(url, wait_until="domcontentloaded")
 
             if on_progress:
-                on_progress(page_num, len(results))
+                on_progress(page_num, 0)
 
             job_cards = await page.query_selector_all("article[data-testid='job-card']")
             if not job_cards:
@@ -104,7 +104,9 @@ async def scrape_seek(
 
             page_num += 1
 
-        for job in results:
+        for i, job in enumerate(results, start=1):
+            if on_progress:
+                on_progress(page_num, i)
             try:
                 await page.goto(job.seek_url, wait_until="domcontentloaded")
                 desc_el = await page.query_selector("[data-automation='jobAdDetails']")
