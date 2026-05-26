@@ -1,14 +1,7 @@
 "use client";
 import { useState } from "react";
+import { ScrapeStatus } from "@/types";
 import ScrapeProgress from "./ScrapeProgress";
-
-interface ScrapeStatus {
-  status: string;
-  phase: string;
-  current_page: number;
-  jobs_scraped: number;
-  jobs_compared: number;
-}
 
 interface Props {
   onScrape: (keywords: string, location: string) => void;

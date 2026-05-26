@@ -2,20 +2,9 @@
 import { useState, useEffect, useRef } from "react";
 import SearchForm from "@/components/SearchForm";
 import JobList from "@/components/JobList";
+import { ScrapeStatus } from "@/types";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-interface ScrapeStatus {
-  status: string;
-  phase: string;
-  current_page: number;
-  jobs_scraped: number;
-  jobs_compared: number;
-  inserted: number;
-  updated_reposts: number;
-  skipped_hidden: number;
-  error: string | null;
-}
 
 const IDLE_STATUS: ScrapeStatus = {
   status: "idle",
@@ -106,12 +95,16 @@ export default function HomePage() {
     await fetch(`${API}/api/scrape/cancel`, { method: "POST" });
   };
 
-  const scrapeMsg =
-    scrapeStatus.status === "done"
-      ? `Done — ${scrapeStatus.inserted} new, ${scrapeStatus.updated_reposts} reposted`
-      : scrapeStatus.status === "error"
-      ? `Error: ${scrapeStatus.error}`
-      : null;
+  function scrapeMessage(): string | null {
+    if (scrapeStatus.status === "done") {
+      return `Done — ${scrapeStatus.inserted} new, ${scrapeStatus.updated_reposts} reposted`;
+    }
+    if (scrapeStatus.status === "error") {
+      return `Error: ${scrapeStatus.error}`;
+    }
+    return null;
+  }
+  const scrapeMsg = scrapeMessage();
 
   return (
     <main className="max-w-4xl mx-auto px-4 py-10">

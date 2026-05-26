@@ -26,3 +26,15 @@ export interface JobsPage {
   page: number;
   page_size: number;
 }
+
+export interface ScrapeStatus {
+  status: string;
+  phase: string;
+  current_page: number;
+  jobs_scraped: number;
+  jobs_compared: number;
+  inserted: number;
+  updated_reposts: number;
+  skipped_hidden: number;
+  error: string | null;
+}
