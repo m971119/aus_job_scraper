@@ -71,34 +71,3 @@ def test_parse_location_city_only():
     assert result["suburb"] is None
 
 
-import pytest
-from unittest.mock import AsyncMock
-from scraper import detect_total_pages
-
-
-@pytest.mark.asyncio
-async def test_detect_total_pages_reads_aria_labels():
-    mock_page = AsyncMock()
-    link1 = AsyncMock()
-    link1.get_attribute = AsyncMock(return_value="Page 1")
-    link2 = AsyncMock()
-    link2.get_attribute = AsyncMock(return_value="Page 4")
-    mock_page.query_selector_all = AsyncMock(return_value=[link1, link2])
-    result = await detect_total_pages(mock_page)
-    assert result == 4
-
-
-@pytest.mark.asyncio
-async def test_detect_total_pages_falls_back_to_one_on_error():
-    mock_page = AsyncMock()
-    mock_page.query_selector_all = AsyncMock(side_effect=Exception("timeout"))
-    result = await detect_total_pages(mock_page)
-    assert result == 1
-
-
-@pytest.mark.asyncio
-async def test_detect_total_pages_returns_one_when_no_links():
-    mock_page = AsyncMock()
-    mock_page.query_selector_all = AsyncMock(return_value=[])
-    result = await detect_total_pages(mock_page)
-    assert result == 1

@@ -167,7 +167,8 @@ def test_scrape_status_shape():
     body = res.json()
     assert body["status"] == "idle"
     assert body["current_page"] == 0
-    assert body["total_pages"] == 0
+    assert "jobs_scraped" in body
+    assert "jobs_compared" in body
 
 
 def test_scrape_status_idle_on_startup():
