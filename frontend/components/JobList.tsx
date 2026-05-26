@@ -107,7 +107,7 @@ export default function JobList({ refreshKey }: Props) {
       ) : (
         <div className="grid gap-4">
           {data.items.map((job) => (
-            <JobCard key={job.id} job={job} onHide={handleHide} />
+            <JobCard key={job.id} job={job} allTags={allTags} onHide={handleHide} />
           ))}
         </div>
       )}

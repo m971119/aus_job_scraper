@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { Job } from "@/types";
+import { Job, Tag } from "@/types";
 
 interface Props {
   job: Job;
+  allTags: Tag[];
   onHide?: (id: number) => void;
 }
 
-export default function JobCard({ job, onHide }: Props) {
+export default function JobCard({ job, allTags, onHide }: Props) {
   const location = [job.suburb, job.city, job.state].filter(Boolean).join(", ");
 
   return (
