@@ -1,5 +1,23 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional
+
+
+class TagOut(BaseModel):
+    id: int
+    name: str
+
+    model_config = {"from_attributes": True}
+
+
+class TagCreate(BaseModel):
+    name: str
+
+    @field_validator("name")
+    @classmethod
+    def name_not_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("name must not be empty")
+        return v.strip()
 
 
 class ScrapedJob(BaseModel):
@@ -52,6 +70,7 @@ class JobOut(BaseModel):
     latest_listing_date: Optional[str]
     is_repost: bool
     is_hidden: bool
+    tags: list[TagOut] = []
 
     model_config = {"from_attributes": True}
 

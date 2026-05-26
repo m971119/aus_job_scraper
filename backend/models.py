@@ -3,6 +3,16 @@ from typing import Optional
 from datetime import datetime, timezone
 
 
+class Tag(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str = Field(unique=True, index=True)
+
+
+class JobTag(SQLModel, table=True):
+    job_id: int = Field(foreign_key="job.id", primary_key=True)
+    tag_id: int = Field(foreign_key="tag.id", primary_key=True)
+
+
 class Job(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     seek_url: str = Field(unique=True, index=True)
