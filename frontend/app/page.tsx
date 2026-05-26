@@ -56,6 +56,7 @@ export default function HomePage() {
       if (data.status !== "running") {
         stopPolling();
         if (data.status === "done") setRefreshKey((k) => k + 1);
+        if (data.status === "cancelled") setTimeout(() => setScrapeStatus(IDLE_STATUS), 2000);
       }
     } catch {
       // network blip — keep polling
