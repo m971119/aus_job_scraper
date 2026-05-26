@@ -3,6 +3,16 @@
 **Date:** 2026-05-26
 **Status:** Approved
 
+## Mockups
+
+### Interaction options considered
+
+![Interaction options](assets/interaction-options.png)
+
+### Approved design — card closed and panel open
+
+![Card design](assets/card-design.png)
+
 ## Goal
 
 Allow users to add and remove tags directly from the job listing card, without navigating to the job detail page.
