@@ -59,7 +59,7 @@ async def scrape_seek(
             await page.goto(url, wait_until="domcontentloaded")
 
             if on_progress:
-                on_progress(page_num, 0)
+                on_progress(page_num, len(results))
 
             job_cards = await page.query_selector_all("article[data-testid='job-card']")
             if not job_cards:

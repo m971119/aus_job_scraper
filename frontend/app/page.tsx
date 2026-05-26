@@ -7,8 +7,10 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 interface ScrapeStatus {
   status: string;
+  phase: string;
   current_page: number;
-  total_pages: number;
+  jobs_scraped: number;
+  jobs_compared: number;
   inserted: number;
   updated_reposts: number;
   skipped_hidden: number;
@@ -17,8 +19,10 @@ interface ScrapeStatus {
 
 const IDLE_STATUS: ScrapeStatus = {
   status: "idle",
+  phase: "seeking",
   current_page: 0,
-  total_pages: 0,
+  jobs_scraped: 0,
+  jobs_compared: 0,
   inserted: 0,
   updated_reposts: 0,
   skipped_hidden: 0,

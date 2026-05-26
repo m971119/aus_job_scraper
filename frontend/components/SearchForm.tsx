@@ -4,8 +4,10 @@ import ScrapeProgress from "./ScrapeProgress";
 
 interface ScrapeStatus {
   status: string;
+  phase: string;
   current_page: number;
-  total_pages: number;
+  jobs_scraped: number;
+  jobs_compared: number;
 }
 
 interface Props {
@@ -54,8 +56,10 @@ export default function SearchForm({ onScrape, scrapeStatus, onCancel, countdown
 
       <ScrapeProgress
         status={scrapeStatus.status}
+        phase={scrapeStatus.phase}
         currentPage={scrapeStatus.current_page}
-        totalPages={scrapeStatus.total_pages}
+        jobsScraped={scrapeStatus.jobs_scraped}
+        jobsCompared={scrapeStatus.jobs_compared}
         onCancel={onCancel}
         countdown={countdown}
       />

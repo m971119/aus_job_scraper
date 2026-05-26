@@ -27,9 +27,11 @@ class ScrapeResponse(BaseModel):
 
 
 class ScrapeStatus(BaseModel):
-    status: str  # "idle" | "running" | "done" | "cancelled" | "error"
+    status: str           # "idle" | "running" | "done" | "cancelled" | "error"
+    phase: str = "seeking"  # "seeking" | "comparing"
     current_page: int = 0
-    total_pages: int = 0
+    jobs_scraped: int = 0
+    jobs_compared: int = 0
     inserted: int = 0
     updated_reposts: int = 0
     skipped_hidden: int = 0

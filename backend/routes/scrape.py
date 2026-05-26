@@ -11,8 +11,10 @@ router = APIRouter()
 
 _state: dict = {
     "status": "idle",
+    "phase": "seeking",
     "current_page": 0,
-    "total_pages": 0,
+    "jobs_scraped": 0,
+    "jobs_compared": 0,
     "inserted": 0,
     "updated_reposts": 0,
     "skipped_hidden": 0,
@@ -24,8 +26,10 @@ _state: dict = {
 def _reset_state() -> None:
     _state.update({
         "status": "running",
+        "phase": "seeking",
         "current_page": 0,
-        "total_pages": 0,
+        "jobs_scraped": 0,
+        "jobs_compared": 0,
         "inserted": 0,
         "updated_reposts": 0,
         "skipped_hidden": 0,
@@ -34,9 +38,9 @@ def _reset_state() -> None:
     })
 
 
-def _on_progress(current: int, total: int) -> None:
-    _state["current_page"] = current
-    _state["total_pages"] = total
+def _on_progress(current_page: int, jobs_scraped: int) -> None:
+    _state["current_page"] = current_page
+    _state["jobs_scraped"] = jobs_scraped
 
 
 def _is_cancelled() -> bool:
@@ -57,6 +61,9 @@ async def _run_scrape(req: ScrapeRequest) -> None:
             _state["status"] = "cancelled"
             return
 
+        _state["phase"] = "comparing"
+        _state["jobs_scraped"] = len(jobs)
+
         with Session(engine) as session:
             for scraped in jobs:
                 existing = session.exec(
@@ -66,14 +73,14 @@ async def _run_scrape(req: ScrapeRequest) -> None:
                 if existing:
                     if existing.is_hidden:
                         _state["skipped_hidden"] += 1
-                        continue
-                    dates = json.loads(existing.listed_dates or "[]")
-                    if scraped.listed_date not in dates:
-                        dates.append(scraped.listed_date)
-                        existing.listed_dates = json.dumps(dates)
-                        existing.latest_listing_date = max(dates)
-                        existing.is_repost = True
-                        _state["updated_reposts"] += 1
+                    else:
+                        dates = json.loads(existing.listed_dates or "[]")
+                        if scraped.listed_date not in dates:
+                            dates.append(scraped.listed_date)
+                            existing.listed_dates = json.dumps(dates)
+                            existing.latest_listing_date = max(dates)
+                            existing.is_repost = True
+                            _state["updated_reposts"] += 1
                 else:
                     dates = [scraped.listed_date]
                     job = Job(
@@ -90,6 +97,8 @@ async def _run_scrape(req: ScrapeRequest) -> None:
                     )
                     session.add(job)
                     _state["inserted"] += 1
+
+                _state["jobs_compared"] += 1
             session.commit()
 
         _state["status"] = "done"
@@ -112,8 +121,10 @@ async def trigger_scrape(req: ScrapeRequest) -> dict:
 def get_scrape_status() -> ScrapeStatus:
     return ScrapeStatus(
         status=_state["status"],
+        phase=_state["phase"],
         current_page=_state["current_page"],
-        total_pages=_state["total_pages"],
+        jobs_scraped=_state["jobs_scraped"],
+        jobs_compared=_state["jobs_compared"],
         inserted=_state["inserted"],
         updated_reposts=_state["updated_reposts"],
         skipped_hidden=_state["skipped_hidden"],
