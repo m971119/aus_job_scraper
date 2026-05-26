@@ -11,23 +11,10 @@ from scraper import scrape_seek
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-_state: dict = {
-    "status": "idle",
-    "phase": "seeking",
-    "current_page": 0,
-    "jobs_scraped": 0,
-    "jobs_compared": 0,
-    "inserted": 0,
-    "updated_reposts": 0,
-    "skipped_hidden": 0,
-    "error": None,
-    "cancel_requested": False,
-}
 
-
-def _reset_state() -> None:
-    _state.update({
-        "status": "running",
+def _initial_state(status: str = "idle") -> dict:
+    return {
+        "status": status,
         "phase": "seeking",
         "current_page": 0,
         "jobs_scraped": 0,
@@ -37,7 +24,14 @@ def _reset_state() -> None:
         "skipped_hidden": 0,
         "error": None,
         "cancel_requested": False,
-    })
+    }
+
+
+_state: dict = _initial_state()
+
+
+def _reset_state() -> None:
+    _state.update(_initial_state("running"))
 
 
 def _on_progress(current_page: int, jobs_scraped: int) -> None:
@@ -125,17 +119,8 @@ async def trigger_scrape(req: ScrapeRequest) -> dict:
 
 @router.get("/scrape/status", response_model=ScrapeStatus)
 def get_scrape_status() -> ScrapeStatus:
-    return ScrapeStatus(
-        status=_state["status"],
-        phase=_state["phase"],
-        current_page=_state["current_page"],
-        jobs_scraped=_state["jobs_scraped"],
-        jobs_compared=_state["jobs_compared"],
-        inserted=_state["inserted"],
-        updated_reposts=_state["updated_reposts"],
-        skipped_hidden=_state["skipped_hidden"],
-        error=_state["error"],
-    )
+    fields = {k: v for k, v in _state.items() if k != "cancel_requested"}
+    return ScrapeStatus(**fields)
 
 
 @router.post("/scrape/cancel")
