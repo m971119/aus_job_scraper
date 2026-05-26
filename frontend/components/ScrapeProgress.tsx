@@ -15,7 +15,7 @@ export default function ScrapeProgress({ status, currentPage, totalPages, onCanc
 
   let label: string;
   if (detecting) {
-    label = "Detecting pages...";
+    label = `Scraping page ${currentPage}...`;
   } else if (isRunning) {
     label = `Scraping... page ${currentPage} of ${totalPages}`;
   } else if (status === "done") {

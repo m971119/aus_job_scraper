@@ -1,3 +1,4 @@
+import logging
 import re
 from datetime import date, timedelta
 from urllib.parse import urlencode
@@ -5,29 +6,12 @@ from playwright.async_api import async_playwright
 from schemas import ScrapedJob
 
 SEEK_BASE = "https://www.seek.com.au"
+logger = logging.getLogger(__name__)
 
 
 def build_seek_url(keywords: str, location: str, page: int = 1) -> str:
     params = {"keywords": keywords, "where": location, "sortmode": "ListedDate", "daterange": 31, "page": page}
     return f"{SEEK_BASE}/jobs?{urlencode(params)}"
-
-
-async def detect_total_pages(page) -> int:
-    """Read total page count from Seek's pagination. Returns 1 on failure."""
-    try:
-        links = await page.query_selector_all("a[aria-label^='Page ']")
-        nums = []
-        for link in links:
-            label = await link.get_attribute("aria-label")
-            if label:
-                m = re.match(r"Page (\d+)", label)
-                if m:
-                    nums.append(int(m.group(1)))
-        if nums:
-            return max(nums)
-    except Exception:
-        pass
-    return 1
 
 
 def parse_listing_date(text: str) -> str:
@@ -56,7 +40,7 @@ async def scrape_seek(
     on_progress=None,   # callable(current_page: int, total_pages: int)
     is_cancelled=None,  # callable() -> bool
 ) -> list[ScrapedJob]:
-    """Scrape all Seek pages for the given search. Detects total pages from Seek's pagination."""
+    """Scrape Seek pages until an empty page is found."""
     results: list[ScrapedJob] = []
 
     async with async_playwright() as p:
@@ -64,24 +48,22 @@ async def scrape_seek(
         page = await browser.new_page()
         page.set_default_timeout(20000)
 
-        total_pages = 1
         page_num = 1
 
-        while page_num <= total_pages:
+        while True:
             if is_cancelled and is_cancelled():
                 break
 
             url = build_seek_url(keywords, location, page_num)
+            logger.info("Scraping page %d: %s", page_num, url)
             await page.goto(url, wait_until="domcontentloaded")
 
-            if page_num == 1:
-                total_pages = await detect_total_pages(page)
-
             if on_progress:
-                on_progress(page_num, total_pages)
+                on_progress(page_num, 0)
 
             job_cards = await page.query_selector_all("article[data-testid='job-card']")
             if not job_cards:
+                logger.info("No job cards on page %d — done", page_num)
                 break
 
             for card in job_cards:
