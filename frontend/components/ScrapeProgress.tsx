@@ -46,7 +46,7 @@ export default function ScrapeProgress({
       <div className="flex items-start justify-between">
         <div className="space-y-0.5">
           {lines.map((line, i) => (
-            <p key={i} className="text-sm text-[#888888]">
+            <p key={i} className="text-sm text-muted">
               {line}
               {i === 0 && isRunning && countdown > 0 && (
                 <span className="ml-2 text-xs">— next update in {countdown}s</span>
@@ -57,7 +57,7 @@ export default function ScrapeProgress({
         {isRunning && (
           <button
             onClick={onCancel}
-            className="text-xs text-[#753991] hover:underline ml-4 mt-0.5 shrink-0"
+            className="text-xs text-secondary hover:underline ml-4 mt-0.5 shrink-0"
           >
             Cancel
           </button>
