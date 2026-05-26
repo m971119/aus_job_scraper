@@ -23,11 +23,18 @@ export default function JobCard({ job, onHide }: Props) {
             <p className="text-navy font-medium mt-0.5">{job.company}</p>
           )}
         </div>
-        {job.is_repost && (
-          <span className="shrink-0 text-xs font-semibold px-2 py-1 rounded-full bg-accent/20 text-accent border border-accent/40">
-            Reposted
-          </span>
-        )}
+        <div className="flex shrink-0 gap-1.5">
+          {job.is_repost && (
+            <span className="text-xs font-semibold px-2 py-1 rounded-full bg-accent/20 text-accent border border-accent/40">
+              Reposted
+            </span>
+          )}
+          {job.tags?.some((t) => t.name.toLowerCase() === "interested") && (
+            <span className="text-xs font-semibold px-2 py-1 rounded-full bg-primary/15 text-primary border border-primary/30">
+              Interested
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">

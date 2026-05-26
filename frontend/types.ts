@@ -1,3 +1,8 @@
+export interface Tag {
+  id: number;
+  name: string;
+}
+
 export interface Job {
   id: number;
   seek_url: string;
@@ -12,6 +17,7 @@ export interface Job {
   latest_listing_date: string | null;
   is_repost: boolean;
   is_hidden: boolean;
+  tags: Tag[];
 }
 
 export interface JobsPage {

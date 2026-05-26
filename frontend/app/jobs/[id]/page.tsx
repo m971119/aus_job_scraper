@@ -3,6 +3,7 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Job } from "@/types";
+import TagManager from "@/components/TagManager";
 
 function BackButton() {
   return (
@@ -117,6 +118,8 @@ export default function JobDetailPage({
             <p className="text-sm text-muted italic">No description available.</p>
           )}
         </div>
+
+        <TagManager jobId={job.id} initialTags={job.tags ?? []} />
 
         <div className="mt-6 flex items-center gap-3">
           <a
