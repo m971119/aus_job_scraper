@@ -1,5 +1,9 @@
+"use client";
+import { useState } from "react";
 import Link from "next/link";
 import { Job, Tag } from "@/types";
+
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 interface Props {
   job: Job;
@@ -8,6 +12,21 @@ interface Props {
 }
 
 export default function JobCard({ job, allTags, onHide }: Props) {
+  const [tags, setTags] = useState<Tag[]>(job.tags ?? []);
+  const [panelOpen, setPanelOpen] = useState(false);
+
+  const addTag = async (tag: Tag) => {
+    await fetch(`${API}/api/jobs/${job.id}/tags/${tag.id}`, { method: "POST" });
+    setTags((prev) => [...prev, tag]);
+    setPanelOpen(false);
+  };
+
+  const removeTag = async (tag: Tag) => {
+    await fetch(`${API}/api/jobs/${job.id}/tags/${tag.id}`, { method: "DELETE" });
+    setTags((prev) => prev.filter((t) => t.id !== tag.id));
+  };
+
+  const appliedIds = new Set(tags.map((t) => t.id));
   const location = [job.suburb, job.city, job.state].filter(Boolean).join(", ");
 
   return (
