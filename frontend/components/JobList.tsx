@@ -64,25 +64,30 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
     router.replace(qs ? `?${qs}` : "?", { scroll: false });
   }, [keyword, location, includeTags, excludeTags, isRepost, sort, router]);
 
-  const fetchJobs = useCallback(async (p: number) => {
+  const buildParams = useCallback((p: number) => {
     const params = new URLSearchParams({ sort, page: String(p), page_size: String(pageSize) });
     if (keyword) params.set("keyword", keyword);
     if (location) params.set("location", location);
     includeTags.forEach((t) => params.append("include_tag", t));
     excludeTags.forEach((t) => params.append("exclude_tag", t));
     if (isRepost !== "all") params.set("is_repost", isRepost);
-    const res = await fetch(`${API}/api/jobs?${params}`);
-    if (res.ok) setData(await res.json());
+    return params;
   }, [keyword, location, includeTags, excludeTags, isRepost, sort, pageSize]);
 
+  // Reset page when filters change (not page itself)
   useEffect(() => {
     setPage(1);
-    fetchJobs(1);
-  }, [keyword, location, includeTags, excludeTags, isRepost, sort, pageSize, refreshKey, fetchJobs]);
+  }, [keyword, location, includeTags, excludeTags, isRepost, sort, pageSize, refreshKey]);
 
+  // Single fetch effect — AbortController cancels any in-flight request
   useEffect(() => {
-    fetchJobs(page);
-  }, [page, fetchJobs]);
+    const controller = new AbortController();
+    fetch(`${API}/api/jobs?${buildParams(page)}`, { signal: controller.signal })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d) setData(d); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [page, buildParams, refreshKey]);
 
   const totalPages = Math.max(1, Math.ceil(data.total / pageSize));
 
