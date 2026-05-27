@@ -20,7 +20,7 @@ def get_session():
 def list_jobs(
     keyword: Optional[str] = Query(None),
     location: Optional[str] = Query(None),
-    tag: Optional[str] = Query(None),
+    include_tag: Optional[str] = Query(None),
     sort: Literal["latest", "oldest"] = Query("latest"),
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=100),
@@ -44,8 +44,8 @@ def list_jobs(
             )
         )
 
-    if tag:
-        query = query.join(JobTag, Job.id == JobTag.job_id).join(Tag, JobTag.tag_id == Tag.id).where(Tag.name.ilike(tag))
+    if include_tag:
+        query = query.join(JobTag, Job.id == JobTag.job_id).join(Tag, JobTag.tag_id == Tag.id).where(Tag.name.ilike(include_tag))
 
     total = session.exec(select(func.count()).select_from(query.subquery())).one()
 

@@ -45,7 +45,7 @@ def test_filter_by_tag_returns_matching_jobs():
     tag_id = make_tag("Interested")
     client.post(f"/api/jobs/{job1}/tags/{tag_id}")
 
-    resp = client.get("/api/jobs?tag=Interested")
+    resp = client.get("/api/jobs?include_tag=Interested")
     assert resp.status_code == 200
     ids = {j["id"] for j in resp.json()["items"]}
     assert job1 in ids
@@ -58,7 +58,7 @@ def test_filter_by_tag_excludes_untagged_jobs():
     tag_id = make_tag("Python")
     client.post(f"/api/jobs/{job1}/tags/{tag_id}")
 
-    resp = client.get("/api/jobs?tag=Python")
+    resp = client.get("/api/jobs?include_tag=Python")
     assert resp.json()["total"] == 1
 
 
@@ -67,14 +67,14 @@ def test_filter_by_tag_case_insensitive():
     tag_id = make_tag("Interested")
     client.post(f"/api/jobs/{job_id}/tags/{tag_id}")
 
-    resp = client.get("/api/jobs?tag=interested")
+    resp = client.get("/api/jobs?include_tag=interested")
     assert resp.status_code == 200
     assert resp.json()["total"] == 1
 
 
 def test_filter_by_unknown_tag_returns_empty():
     make_job("https://seek.com.au/job/1")
-    resp = client.get("/api/jobs?tag=nonexistent")
+    resp = client.get("/api/jobs?include_tag=nonexistent")
     assert resp.status_code == 200
     assert resp.json()["total"] == 0
 
@@ -86,7 +86,7 @@ def test_filter_by_tag_combined_with_keyword():
     client.post(f"/api/jobs/{job1}/tags/{tag_id}")
     client.post(f"/api/jobs/{job2}/tags/{tag_id}")
 
-    resp = client.get("/api/jobs?tag=Python&keyword=senior")
+    resp = client.get("/api/jobs?include_tag=Python&keyword=senior")
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] == 1
