@@ -22,6 +22,7 @@ def list_jobs(
     location: Optional[str] = Query(None),
     include_tag: Optional[str] = Query(None),
     exclude_tag: Optional[str] = Query(None),
+    is_repost: Literal["all", "originals", "reposts"] = Query("all"),
     sort: Literal["latest", "oldest"] = Query("latest"),
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=100),
@@ -57,6 +58,11 @@ def list_jobs(
             .where(Tag.name.ilike(exc))
         ).exists()
         query = query.where(~exclude_subq)
+
+    if is_repost == "originals":
+        query = query.where(Job.is_repost == False)  # noqa: E712
+    elif is_repost == "reposts":
+        query = query.where(Job.is_repost == True)  # noqa: E712
 
     total = session.exec(select(func.count()).select_from(query.subquery())).one()
 

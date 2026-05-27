@@ -122,3 +122,16 @@ def test_include_and_exclude_tag_combined():
     assert resp.status_code == 200
     ids = {j["id"] for j in resp.json()["items"]}
     assert ids == {job1}
+
+
+def test_include_tag_and_is_repost_combined():
+    job1 = make_job("https://seek.com.au/job/1", is_repost=False)
+    job2 = make_job("https://seek.com.au/job/2", is_repost=True)
+    tag_id = make_tag("Python")
+    client.post(f"/api/jobs/{job1}/tags/{tag_id}")
+    client.post(f"/api/jobs/{job2}/tags/{tag_id}")
+
+    resp = client.get("/api/jobs?include_tag=Python&is_repost=originals")
+    assert resp.status_code == 200
+    ids = {j["id"] for j in resp.json()["items"]}
+    assert ids == {job1}
