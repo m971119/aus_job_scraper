@@ -71,7 +71,16 @@ export default function JobDetailPage({
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="h-1 w-12 bg-accent rounded mb-3" />
-            <h1 className="text-2xl font-bold text-navy">{job.title}</h1>
+            <h1 className="text-2xl font-bold text-navy">
+              <a
+                href={job.seek_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary transition-colors"
+              >
+                {job.title}
+              </a>
+            </h1>
             {job.company && (
               <p className="text-primary font-medium mt-1">{job.company}</p>
             )}
