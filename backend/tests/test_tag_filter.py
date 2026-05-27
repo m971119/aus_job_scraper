@@ -135,3 +135,46 @@ def test_include_tag_and_is_repost_combined():
     assert resp.status_code == 200
     ids = {j["id"] for j in resp.json()["items"]}
     assert ids == {job1}
+
+
+def test_multi_include_tags_returns_union():
+    job1 = make_job("https://seek.com.au/job/1", title="Python Dev")
+    job2 = make_job("https://seek.com.au/job/2", title="React Dev")
+    job3 = make_job("https://seek.com.au/job/3", title="Java Dev")
+    python_id = make_tag("Python")
+    react_id = make_tag("React")
+    client.post(f"/api/jobs/{job1}/tags/{python_id}")
+    client.post(f"/api/jobs/{job2}/tags/{react_id}")
+
+    resp = client.get("/api/jobs?include_tag=Python&include_tag=React")
+    assert resp.status_code == 200
+    ids = {j["id"] for j in resp.json()["items"]}
+    assert ids == {job1, job2}
+    assert job3 not in ids
+
+
+def test_multi_include_tags_no_duplicates_when_job_has_both():
+    job1 = make_job("https://seek.com.au/job/1")
+    python_id = make_tag("Python")
+    react_id = make_tag("React")
+    client.post(f"/api/jobs/{job1}/tags/{python_id}")
+    client.post(f"/api/jobs/{job1}/tags/{react_id}")
+
+    resp = client.get("/api/jobs?include_tag=Python&include_tag=React")
+    assert resp.status_code == 200
+    assert resp.json()["total"] == 1
+
+
+def test_multi_exclude_tags_excludes_any_match():
+    job1 = make_job("https://seek.com.au/job/1")
+    job2 = make_job("https://seek.com.au/job/2")
+    job3 = make_job("https://seek.com.au/job/3")
+    rejected_id = make_tag("Rejected")
+    not_interested_id = make_tag("NotInterested")
+    client.post(f"/api/jobs/{job2}/tags/{rejected_id}")
+    client.post(f"/api/jobs/{job3}/tags/{not_interested_id}")
+
+    resp = client.get("/api/jobs?exclude_tag=Rejected&exclude_tag=NotInterested")
+    assert resp.status_code == 200
+    ids = {j["id"] for j in resp.json()["items"]}
+    assert ids == {job1}
