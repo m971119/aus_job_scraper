@@ -6,7 +6,7 @@ interface Props {
   label: string;
   tags: Tag[];
   selected: string[];
-  onChange: (values: string[]) => void;
+  onChange: (updater: (prev: string[]) => string[]) => void;
 }
 
 export default function TagMultiSelect({ label, tags, selected, onChange }: Props) {
@@ -22,7 +22,7 @@ export default function TagMultiSelect({ label, tags, selected, onChange }: Prop
   }, []);
 
   const toggle = (name: string) => {
-    onChange(selected.includes(name) ? selected.filter((s) => s !== name) : [...selected, name]);
+    onChange((prev) => prev.includes(name) ? prev.filter((s) => s !== name) : [...prev, name]);
   };
 
   const buttonLabel = selected.length === 0 ? label : `${label} (${selected.length})`;

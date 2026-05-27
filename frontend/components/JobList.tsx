@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { JobsPage, Tag } from "@/types";
 import JobCard from "./JobCard";
 import TagMultiSelect from "./TagMultiSelect";
@@ -15,7 +15,6 @@ interface Props {
 
 export default function JobList({ refreshKey, onFilterStateChange }: Props) {
   const searchParams = useSearchParams();
-  const router = useRouter();
 
   const [keyword, setKeyword] = useState(searchParams.get("keyword") ?? "");
   const [location, setLocation] = useState(searchParams.get("location") ?? "");
@@ -51,7 +50,7 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
     fetch(`${API}/api/tags`).then((r) => r.json()).then(setAllTags);
   }, []);
 
-  // Sync filters to URL so they survive reload
+  // Sync filters to URL without triggering Next.js navigation
   useEffect(() => {
     const params = new URLSearchParams();
     if (keyword) params.set("keyword", keyword);
@@ -61,8 +60,8 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
     if (isRepost !== "all") params.set("is_repost", isRepost);
     if (sort !== "latest") params.set("sort", sort);
     const qs = params.toString();
-    router.replace(qs ? `?${qs}` : "?", { scroll: false });
-  }, [keyword, location, includeTags, excludeTags, isRepost, sort, router]);
+    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+  }, [keyword, location, includeTags, excludeTags, isRepost, sort]);
 
   const buildParams = useCallback((p: number) => {
     const params = new URLSearchParams({ sort, page: String(p), page_size: String(pageSize) });
