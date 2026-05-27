@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { JobsPage, Tag } from "@/types";
 import JobCard from "./JobCard";
+import TagMultiSelect from "./TagMultiSelect";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
@@ -18,8 +19,8 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
 
   const [keyword, setKeyword] = useState(searchParams.get("keyword") ?? "");
   const [location, setLocation] = useState(searchParams.get("location") ?? "");
-  const [includeTag, setIncludeTag] = useState(searchParams.get("include_tag") ?? "");
-  const [excludeTag, setExcludeTag] = useState(searchParams.get("exclude_tag") ?? "");
+  const [includeTags, setIncludeTags] = useState<string[]>(searchParams.getAll("include_tag"));
+  const [excludeTags, setExcludeTags] = useState<string[]>(searchParams.getAll("exclude_tag"));
   const [isRepost, setIsRepost] = useState<"all" | "originals" | "reposts">(
     (searchParams.get("is_repost") as "all" | "originals" | "reposts") ?? "all"
   );
@@ -31,13 +32,13 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
   const [pageSize, setPageSize] = useState(25);
   const [data, setData] = useState<JobsPage>({ items: [], total: 0, page: 1, page_size: 25 });
 
-  const hasActiveFilters = !!(keyword || location || includeTag || excludeTag || isRepost !== "all" || sort !== "latest");
+  const hasActiveFilters = !!(keyword || location || includeTags.length || excludeTags.length || isRepost !== "all" || sort !== "latest");
 
   const resetFilters = useCallback(() => {
     setKeyword("");
     setLocation("");
-    setIncludeTag("");
-    setExcludeTag("");
+    setIncludeTags([]);
+    setExcludeTags([]);
     setIsRepost("all");
     setSort("latest");
   }, []);
@@ -55,29 +56,29 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
     const params = new URLSearchParams();
     if (keyword) params.set("keyword", keyword);
     if (location) params.set("location", location);
-    if (includeTag) params.set("include_tag", includeTag);
-    if (excludeTag) params.set("exclude_tag", excludeTag);
+    includeTags.forEach((t) => params.append("include_tag", t));
+    excludeTags.forEach((t) => params.append("exclude_tag", t));
     if (isRepost !== "all") params.set("is_repost", isRepost);
     if (sort !== "latest") params.set("sort", sort);
     const qs = params.toString();
     router.replace(qs ? `?${qs}` : "?", { scroll: false });
-  }, [keyword, location, includeTag, excludeTag, isRepost, sort, router]);
+  }, [keyword, location, includeTags, excludeTags, isRepost, sort, router]);
 
   const fetchJobs = useCallback(async (p: number) => {
     const params = new URLSearchParams({ sort, page: String(p), page_size: String(pageSize) });
     if (keyword) params.set("keyword", keyword);
     if (location) params.set("location", location);
-    if (includeTag) params.set("include_tag", includeTag);
-    if (excludeTag) params.set("exclude_tag", excludeTag);
+    includeTags.forEach((t) => params.append("include_tag", t));
+    excludeTags.forEach((t) => params.append("exclude_tag", t));
     if (isRepost !== "all") params.set("is_repost", isRepost);
     const res = await fetch(`${API}/api/jobs?${params}`);
     if (res.ok) setData(await res.json());
-  }, [keyword, location, includeTag, excludeTag, isRepost, sort, pageSize]);
+  }, [keyword, location, includeTags, excludeTags, isRepost, sort, pageSize]);
 
   useEffect(() => {
     setPage(1);
     fetchJobs(1);
-  }, [keyword, location, includeTag, excludeTag, isRepost, sort, pageSize, refreshKey, fetchJobs]);
+  }, [keyword, location, includeTags, excludeTags, isRepost, sort, pageSize, refreshKey, fetchJobs]);
 
   useEffect(() => {
     fetchJobs(page);
@@ -110,26 +111,18 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
           />
         </div>
         <div className="grid grid-cols-4 gap-3">
-          <select
-            value={includeTag}
-            onChange={(e) => setIncludeTag(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
-          >
-            <option value="">Include tag</option>
-            {allTags.map((t) => (
-              <option key={t.id} value={t.name}>{t.name}</option>
-            ))}
-          </select>
-          <select
-            value={excludeTag}
-            onChange={(e) => setExcludeTag(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
-          >
-            <option value="">Exclude tag</option>
-            {allTags.map((t) => (
-              <option key={t.id} value={t.name}>{t.name}</option>
-            ))}
-          </select>
+          <TagMultiSelect
+            label="Include tags"
+            tags={allTags}
+            selected={includeTags}
+            onChange={setIncludeTags}
+          />
+          <TagMultiSelect
+            label="Exclude tags"
+            tags={allTags}
+            selected={excludeTags}
+            onChange={setExcludeTags}
+          />
           <select
             value={isRepost}
             onChange={(e) => setIsRepost(e.target.value as "all" | "originals" | "reposts")}
