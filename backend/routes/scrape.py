@@ -3,6 +3,7 @@ import json
 import logging
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
+from sqlalchemy import func
 from sqlmodel import Session, select
 from models import Job
 from schemas import ScrapeRequest, ScrapeStatus
@@ -43,6 +44,38 @@ def _is_cancelled() -> bool:
     return _state["cancel_requested"]
 
 
+def _find_existing(session: Session, scraped) -> Job | None:
+    """Match by company+title (case-insensitive) when company is present, else by seek_url."""
+    if scraped.company:
+        return session.exec(
+            select(Job).where(
+                func.lower(Job.title) == scraped.title.lower(),
+                func.lower(Job.company) == scraped.company.lower(),
+            )
+        ).first()
+    return session.exec(
+        select(Job).where(Job.seek_url == scraped.seek_url)
+    ).first()
+
+
+def _apply_repost(existing: Job, scraped) -> None:
+    urls = json.loads(existing.seek_urls or "[]")
+    if scraped.seek_url not in urls:
+        urls.append(scraped.seek_url)
+        existing.seek_urls = json.dumps(urls)
+    existing.seek_url = scraped.seek_url
+
+    dates = json.loads(existing.listed_dates or "[]")
+    dates.append(scraped.listed_date)
+    existing.listed_dates = json.dumps(dates)
+    existing.latest_listing_date = max(dates)
+    existing.is_repost = True
+    if scraped.description:
+        existing.description = scraped.description
+    if scraped.salary_range:
+        existing.salary_range = scraped.salary_range
+
+
 async def _run_scrape(req: ScrapeRequest) -> None:
     from database import engine
     try:
@@ -65,25 +98,22 @@ async def _run_scrape(req: ScrapeRequest) -> None:
                 if _state["cancel_requested"]:
                     _state["status"] = "cancelled"
                     return
-                existing = session.exec(
-                    select(Job).where(Job.seek_url == scraped.seek_url)
-                ).first()
+                existing = _find_existing(session, scraped)
 
                 if existing:
                     if existing.is_hidden:
                         _state["skipped_hidden"] += 1
                     else:
                         dates = json.loads(existing.listed_dates or "[]")
-                        if scraped.listed_date not in dates:
-                            dates.append(scraped.listed_date)
-                            existing.listed_dates = json.dumps(dates)
-                            existing.latest_listing_date = max(dates)
-                            existing.is_repost = True
+                        if scraped.listed_date in dates:
+                            pass  # same listing scraped again, skip
+                        else:
+                            _apply_repost(existing, scraped)
                             _state["updated_reposts"] += 1
                 else:
-                    dates = [scraped.listed_date]
-                    job = Job(
+                    session.add(Job(
                         seek_url=scraped.seek_url,
+                        seek_urls=json.dumps([scraped.seek_url]),
                         title=scraped.title,
                         company=scraped.company,
                         description=scraped.description,
@@ -91,10 +121,9 @@ async def _run_scrape(req: ScrapeRequest) -> None:
                         city=scraped.city,
                         suburb=scraped.suburb,
                         salary_range=scraped.salary_range,
-                        listed_dates=json.dumps(dates),
+                        listed_dates=json.dumps([scraped.listed_date]),
                         latest_listing_date=scraped.listed_date,
-                    )
-                    session.add(job)
+                    ))
                     _state["inserted"] += 1
 
                 _state["jobs_compared"] += 1
