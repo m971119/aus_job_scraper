@@ -1,11 +1,14 @@
+import asyncio
 import logging
+import os
+import random
 import re
 from datetime import date, timedelta
 from urllib.parse import urlencode
 from playwright.async_api import async_playwright
 from schemas import ScrapedJob
 
-SEEK_BASE = "https://www.seek.com.au"
+SEEK_BASE = os.getenv("SEEK_BASE", "https://www.seek.com.au")
 logger = logging.getLogger(__name__)
 
 
@@ -45,7 +48,10 @@ async def scrape_seek(
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+        )
+        page = await context.new_page()
         page.set_default_timeout(20000)
 
         page_num = 1
@@ -72,7 +78,7 @@ async def scrape_seek(
                     title = await title_el.inner_text() if title_el else None
                     href = await title_el.get_attribute("href") if title_el else None
                     clean_path = href.split("?")[0] if href else None
-                    seek_url = f"{SEEK_BASE}{clean_path}" if clean_path and clean_path.startswith("/") else clean_path
+                    seek_url = clean_path
 
                     company_el = await card.query_selector("a[data-automation='jobCompany']")
                     company = await company_el.inner_text() if company_el else None
@@ -103,17 +109,20 @@ async def scrape_seek(
                     continue
 
             page_num += 1
+            await asyncio.sleep(random.uniform(1.5, 3.0))
 
         for i, job in enumerate(results, start=1):
             if on_progress:
                 on_progress(page_num, i)
             try:
-                await page.goto(job.seek_url, wait_until="domcontentloaded")
+                await page.goto(f"{SEEK_BASE}{job.seek_url}", wait_until="domcontentloaded")
                 desc_el = await page.query_selector("[data-automation='jobAdDetails']")
                 if desc_el:
                     job.description = (await desc_el.inner_text()).strip()
             except Exception:
                 pass
+            await asyncio.sleep(random.uniform(1.0, 2.0))
 
+        await context.close()
         await browser.close()
     return results
