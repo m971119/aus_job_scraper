@@ -87,66 +87,70 @@ export default function JobList({ refreshKey }: Props) {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <input
-          type="text"
-          placeholder="Filter by keyword..."
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-          className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-        />
-        <input
-          type="text"
-          placeholder="Filter by location..."
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-        />
-        <select
-          value={includeTag}
-          onChange={(e) => setIncludeTag(e.target.value)}
-          className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
-        >
-          <option value="">Include tag</option>
-          {allTags.map((t) => (
-            <option key={t.id} value={t.name}>{t.name}</option>
-          ))}
-        </select>
-        <select
-          value={excludeTag}
-          onChange={(e) => setExcludeTag(e.target.value)}
-          className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
-        >
-          <option value="">Exclude tag</option>
-          {allTags.map((t) => (
-            <option key={t.id} value={t.name}>{t.name}</option>
-          ))}
-        </select>
-        <select
-          value={isRepost}
-          onChange={(e) => setIsRepost(e.target.value as "all" | "originals" | "reposts")}
-          className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
-        >
-          <option value="all">All jobs</option>
-          <option value="originals">Originals only</option>
-          <option value="reposts">Reposts only</option>
-        </select>
-        <select
-          value={sort}
-          onChange={(e) => setSort(e.target.value as "latest" | "oldest")}
-          className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
-        >
-          <option value="latest">Newest first</option>
-          <option value="oldest">Oldest first</option>
-        </select>
-        {hasActiveFilters && (
-          <button
-            onClick={resetFilters}
-            className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-muted hover:border-primary hover:text-primary transition-colors whitespace-nowrap"
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="flex gap-3">
+          <input
+            type="text"
+            placeholder="Filter by keyword..."
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+          />
+          <input
+            type="text"
+            placeholder="Filter by location..."
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+          />
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <select
+            value={includeTag}
+            onChange={(e) => setIncludeTag(e.target.value)}
+            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
           >
-            Reset filters
-          </button>
-        )}
+            <option value="">Include tag</option>
+            {allTags.map((t) => (
+              <option key={t.id} value={t.name}>{t.name}</option>
+            ))}
+          </select>
+          <select
+            value={excludeTag}
+            onChange={(e) => setExcludeTag(e.target.value)}
+            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
+          >
+            <option value="">Exclude tag</option>
+            {allTags.map((t) => (
+              <option key={t.id} value={t.name}>{t.name}</option>
+            ))}
+          </select>
+          <select
+            value={isRepost}
+            onChange={(e) => setIsRepost(e.target.value as "all" | "originals" | "reposts")}
+            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
+          >
+            <option value="all">All jobs</option>
+            <option value="originals">Originals only</option>
+            <option value="reposts">Reposts only</option>
+          </select>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as "latest" | "oldest")}
+            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
+          >
+            <option value="latest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+          </select>
+          {hasActiveFilters && (
+            <button
+              onClick={resetFilters}
+              className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-muted hover:border-primary hover:text-primary transition-colors whitespace-nowrap"
+            >
+              Reset filters
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center justify-between mb-4 text-xs text-muted">
