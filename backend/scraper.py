@@ -20,7 +20,7 @@ def build_seek_url(keywords: str, location: str, page: int = 1) -> str:
 def parse_listing_date(text: str) -> str:
     """Convert Seek relative date text (e.g. '3d ago', '12d ago•Expiring') to ISO date."""
     clean = text.split("•")[0].strip()
-    m = re.match(r"(\d+)d ago", clean)
+    m = re.match(r"(\d+)d\+? ago", clean)
     if m:
         return (date.today() - timedelta(days=int(m.group(1)))).isoformat()
     return date.today().isoformat()
