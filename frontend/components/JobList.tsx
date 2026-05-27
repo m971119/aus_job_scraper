@@ -13,7 +13,9 @@ interface Props {
 export default function JobList({ refreshKey }: Props) {
   const [keyword, setKeyword] = useState("");
   const [location, setLocation] = useState("");
-  const [tag, setTag] = useState("");
+  const [includeTag, setIncludeTag] = useState("");
+  const [excludeTag, setExcludeTag] = useState("");
+  const [isRepost, setIsRepost] = useState<"all" | "originals" | "reposts">("all");
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [sort, setSort] = useState<"latest" | "oldest">("latest");
   const [page, setPage] = useState(1);
@@ -28,15 +30,17 @@ export default function JobList({ refreshKey }: Props) {
     const params = new URLSearchParams({ sort, page: String(p), page_size: String(pageSize) });
     if (keyword) params.set("keyword", keyword);
     if (location) params.set("location", location);
-    if (tag) params.set("tag", tag);
+    if (includeTag) params.set("include_tag", includeTag);
+    if (excludeTag) params.set("exclude_tag", excludeTag);
+    if (isRepost !== "all") params.set("is_repost", isRepost);
     const res = await fetch(`${API}/api/jobs?${params}`);
     if (res.ok) setData(await res.json());
-  }, [keyword, location, tag, sort, pageSize]);
+  }, [keyword, location, includeTag, excludeTag, isRepost, sort, pageSize]);
 
   useEffect(() => {
     setPage(1);
     fetchJobs(1);
-  }, [keyword, location, tag, sort, pageSize, refreshKey, fetchJobs]);
+  }, [keyword, location, includeTag, excludeTag, isRepost, sort, pageSize, refreshKey, fetchJobs]);
 
   useEffect(() => {
     fetchJobs(page);
@@ -67,14 +71,33 @@ export default function JobList({ refreshKey }: Props) {
           className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
         />
         <select
-          value={tag}
-          onChange={(e) => setTag(e.target.value)}
+          value={includeTag}
+          onChange={(e) => setIncludeTag(e.target.value)}
           className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
         >
-          <option value="">All tags</option>
+          <option value="">Include tag</option>
           {allTags.map((t) => (
             <option key={t.id} value={t.name}>{t.name}</option>
           ))}
+        </select>
+        <select
+          value={excludeTag}
+          onChange={(e) => setExcludeTag(e.target.value)}
+          className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
+        >
+          <option value="">Exclude tag</option>
+          {allTags.map((t) => (
+            <option key={t.id} value={t.name}>{t.name}</option>
+          ))}
+        </select>
+        <select
+          value={isRepost}
+          onChange={(e) => setIsRepost(e.target.value as "all" | "originals" | "reposts")}
+          className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
+        >
+          <option value="all">All jobs</option>
+          <option value="originals">Originals only</option>
+          <option value="reposts">Reposts only</option>
         </select>
         <select
           value={sort}
