@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import SearchForm from "@/components/SearchForm";
 import JobList from "@/components/JobList";
 import { ScrapeStatus } from "@/types";
@@ -23,6 +23,13 @@ const POLL_INTERVAL = 3;
 export default function HomePage() {
   const [scrapeStatus, setScrapeStatus] = useState<ScrapeStatus>(IDLE_STATUS);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [hasFilters, setHasFilters] = useState(false);
+  const resetFiltersRef = useRef<() => void>(() => {});
+
+  const handleFilterStateChange = useCallback((has: boolean, reset: () => void) => {
+    setHasFilters(has);
+    resetFiltersRef.current = reset;
+  }, []);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
@@ -126,9 +133,19 @@ export default function HomePage() {
       </div>
 
       <div className="mt-8">
-        <h2 className="text-xl font-semibold text-navy mb-4">Saved Jobs</h2>
+        <div className="flex items-center gap-3 mb-4">
+          <h2 className="text-xl font-semibold text-navy">Saved Jobs</h2>
+          {hasFilters && (
+            <button
+              onClick={() => resetFiltersRef.current()}
+              className="px-3 py-1 text-xs border border-gray-200 rounded-lg text-muted hover:border-primary hover:text-primary transition-colors"
+            >
+              Reset filters
+            </button>
+          )}
+        </div>
         <Suspense>
-          <JobList refreshKey={refreshKey} />
+          <JobList refreshKey={refreshKey} onFilterStateChange={handleFilterStateChange} />
         </Suspense>
       </div>
     </main>

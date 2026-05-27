@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { JobsPage, Tag } from "@/types";
 import JobCard from "./JobCard";
@@ -9,9 +9,10 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
 interface Props {
   refreshKey: number;
+  onFilterStateChange?: (hasFilters: boolean, reset: () => void) => void;
 }
 
-export default function JobList({ refreshKey }: Props) {
+export default function JobList({ refreshKey, onFilterStateChange }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -31,6 +32,19 @@ export default function JobList({ refreshKey }: Props) {
   const [data, setData] = useState<JobsPage>({ items: [], total: 0, page: 1, page_size: 25 });
 
   const hasActiveFilters = !!(keyword || location || includeTag || excludeTag || isRepost !== "all" || sort !== "latest");
+
+  const resetFilters = useCallback(() => {
+    setKeyword("");
+    setLocation("");
+    setIncludeTag("");
+    setExcludeTag("");
+    setIsRepost("all");
+    setSort("latest");
+  }, []);
+
+  useEffect(() => {
+    onFilterStateChange?.(hasActiveFilters, resetFilters);
+  }, [hasActiveFilters, onFilterStateChange, resetFilters]);
 
   useEffect(() => {
     fetch(`${API}/api/tags`).then((r) => r.json()).then(setAllTags);
@@ -76,15 +90,6 @@ export default function JobList({ refreshKey }: Props) {
     await fetch(`${API}/api/jobs/${id}/hide`, { method: "PATCH" });
   };
 
-  const resetFilters = () => {
-    setKeyword("");
-    setLocation("");
-    setIncludeTag("");
-    setExcludeTag("");
-    setIsRepost("all");
-    setSort("latest");
-  };
-
   return (
     <div>
       <div className="flex flex-col gap-3 mb-4">
@@ -104,11 +109,11 @@ export default function JobList({ refreshKey }: Props) {
             className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
           />
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-4 gap-3">
           <select
             value={includeTag}
             onChange={(e) => setIncludeTag(e.target.value)}
-            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
+            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
           >
             <option value="">Include tag</option>
             {allTags.map((t) => (
@@ -118,7 +123,7 @@ export default function JobList({ refreshKey }: Props) {
           <select
             value={excludeTag}
             onChange={(e) => setExcludeTag(e.target.value)}
-            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
+            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
           >
             <option value="">Exclude tag</option>
             {allTags.map((t) => (
@@ -128,7 +133,7 @@ export default function JobList({ refreshKey }: Props) {
           <select
             value={isRepost}
             onChange={(e) => setIsRepost(e.target.value as "all" | "originals" | "reposts")}
-            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
+            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
           >
             <option value="all">All jobs</option>
             <option value="originals">Originals only</option>
@@ -137,19 +142,11 @@ export default function JobList({ refreshKey }: Props) {
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as "latest" | "oldest")}
-            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
+            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
           >
             <option value="latest">Newest first</option>
             <option value="oldest">Oldest first</option>
           </select>
-          {hasActiveFilters && (
-            <button
-              onClick={resetFilters}
-              className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-muted hover:border-primary hover:text-primary transition-colors whitespace-nowrap"
-            >
-              Reset filters
-            </button>
-          )}
         </div>
       </div>
 
