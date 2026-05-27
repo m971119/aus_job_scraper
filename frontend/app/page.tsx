@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import SearchForm from "@/components/SearchForm";
 import JobList from "@/components/JobList";
 import { ScrapeStatus } from "@/types";
@@ -127,7 +127,9 @@ export default function HomePage() {
 
       <div className="mt-8">
         <h2 className="text-xl font-semibold text-navy mb-4">Saved Jobs</h2>
-        <JobList refreshKey={refreshKey} />
+        <Suspense>
+          <JobList refreshKey={refreshKey} />
+        </Suspense>
       </div>
     </main>
   );

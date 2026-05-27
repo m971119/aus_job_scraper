@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { JobsPage, Tag } from "@/types";
 import JobCard from "./JobCard";
 
@@ -11,20 +12,42 @@ interface Props {
 }
 
 export default function JobList({ refreshKey }: Props) {
-  const [keyword, setKeyword] = useState("");
-  const [location, setLocation] = useState("");
-  const [includeTag, setIncludeTag] = useState("");
-  const [excludeTag, setExcludeTag] = useState("");
-  const [isRepost, setIsRepost] = useState<"all" | "originals" | "reposts">("all");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const [keyword, setKeyword] = useState(searchParams.get("keyword") ?? "");
+  const [location, setLocation] = useState(searchParams.get("location") ?? "");
+  const [includeTag, setIncludeTag] = useState(searchParams.get("include_tag") ?? "");
+  const [excludeTag, setExcludeTag] = useState(searchParams.get("exclude_tag") ?? "");
+  const [isRepost, setIsRepost] = useState<"all" | "originals" | "reposts">(
+    (searchParams.get("is_repost") as "all" | "originals" | "reposts") ?? "all"
+  );
+  const [sort, setSort] = useState<"latest" | "oldest">(
+    (searchParams.get("sort") as "latest" | "oldest") ?? "latest"
+  );
   const [allTags, setAllTags] = useState<Tag[]>([]);
-  const [sort, setSort] = useState<"latest" | "oldest">("latest");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [data, setData] = useState<JobsPage>({ items: [], total: 0, page: 1, page_size: 25 });
 
+  const hasActiveFilters = !!(keyword || location || includeTag || excludeTag || isRepost !== "all" || sort !== "latest");
+
   useEffect(() => {
     fetch(`${API}/api/tags`).then((r) => r.json()).then(setAllTags);
   }, []);
+
+  // Sync filters to URL so they survive reload
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (keyword) params.set("keyword", keyword);
+    if (location) params.set("location", location);
+    if (includeTag) params.set("include_tag", includeTag);
+    if (excludeTag) params.set("exclude_tag", excludeTag);
+    if (isRepost !== "all") params.set("is_repost", isRepost);
+    if (sort !== "latest") params.set("sort", sort);
+    const qs = params.toString();
+    router.replace(qs ? `?${qs}` : "?", { scroll: false });
+  }, [keyword, location, includeTag, excludeTag, isRepost, sort, router]);
 
   const fetchJobs = useCallback(async (p: number) => {
     const params = new URLSearchParams({ sort, page: String(p), page_size: String(pageSize) });
@@ -51,6 +74,15 @@ export default function JobList({ refreshKey }: Props) {
   const handleHide = async (id: number) => {
     setData((prev) => ({ ...prev, items: prev.items.filter((j) => j.id !== id), total: prev.total - 1 }));
     await fetch(`${API}/api/jobs/${id}/hide`, { method: "PATCH" });
+  };
+
+  const resetFilters = () => {
+    setKeyword("");
+    setLocation("");
+    setIncludeTag("");
+    setExcludeTag("");
+    setIsRepost("all");
+    setSort("latest");
   };
 
   return (
@@ -107,6 +139,14 @@ export default function JobList({ refreshKey }: Props) {
           <option value="latest">Newest first</option>
           <option value="oldest">Oldest first</option>
         </select>
+        {hasActiveFilters && (
+          <button
+            onClick={resetFilters}
+            className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-muted hover:border-primary hover:text-primary transition-colors whitespace-nowrap"
+          >
+            Reset filters
+          </button>
+        )}
       </div>
 
       <div className="flex items-center justify-between mb-4 text-xs text-muted">
