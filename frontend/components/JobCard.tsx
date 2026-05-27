@@ -35,6 +35,8 @@ export default function JobCard({ job, allTags, onHide }: Props) {
         <div className="flex-1 min-w-0">
           <Link
             href={`/jobs/${job.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-primary font-semibold text-lg hover:underline truncate block"
           >
             {job.title}
@@ -128,6 +130,8 @@ export default function JobCard({ job, allTags, onHide }: Props) {
       <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
         <Link
           href={`/jobs/${job.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
           className="inline-block text-sm font-semibold text-primary border border-primary px-3 py-1.5 rounded-lg hover:bg-primary hover:text-white transition-colors"
         >
           View details
