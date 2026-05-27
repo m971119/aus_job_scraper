@@ -16,13 +16,14 @@ def clean_db():
     SQLModel.metadata.create_all(engine)
 
 
-def make_job(seek_url, title="Dev") -> int:
+def make_job(seek_url, title="Dev", is_repost=False) -> int:
     with Session(engine) as s:
         job = Job(
             seek_url=seek_url,
             title=title,
             listed_dates=json.dumps(["2026-05-26"]),
             latest_listing_date="2026-05-26",
+            is_repost=is_repost,
         )
         s.add(job)
         s.commit()
@@ -91,3 +92,33 @@ def test_filter_by_tag_combined_with_keyword():
     data = resp.json()
     assert data["total"] == 1
     assert data["items"][0]["id"] == job1
+
+
+def test_exclude_tag_removes_tagged_jobs():
+    job1 = make_job("https://seek.com.au/job/1")
+    job2 = make_job("https://seek.com.au/job/2")
+    tag_id = make_tag("Rejected")
+    client.post(f"/api/jobs/{job2}/tags/{tag_id}")
+
+    resp = client.get("/api/jobs?exclude_tag=Rejected")
+    assert resp.status_code == 200
+    ids = {j["id"] for j in resp.json()["items"]}
+    assert job1 in ids
+    assert job2 not in ids
+
+
+def test_include_and_exclude_tag_combined():
+    job1 = make_job("https://seek.com.au/job/1")  # Python only
+    job2 = make_job("https://seek.com.au/job/2")  # Python + Rejected
+    job3 = make_job("https://seek.com.au/job/3")  # no tags
+
+    python_id = make_tag("Python")
+    rejected_id = make_tag("Rejected")
+    client.post(f"/api/jobs/{job1}/tags/{python_id}")
+    client.post(f"/api/jobs/{job2}/tags/{python_id}")
+    client.post(f"/api/jobs/{job2}/tags/{rejected_id}")
+
+    resp = client.get("/api/jobs?include_tag=Python&exclude_tag=Rejected")
+    assert resp.status_code == 200
+    ids = {j["id"] for j in resp.json()["items"]}
+    assert ids == {job1}

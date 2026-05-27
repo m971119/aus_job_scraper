@@ -21,6 +21,7 @@ def list_jobs(
     keyword: Optional[str] = Query(None),
     location: Optional[str] = Query(None),
     include_tag: Optional[str] = Query(None),
+    exclude_tag: Optional[str] = Query(None),
     sort: Literal["latest", "oldest"] = Query("latest"),
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=100),
@@ -46,6 +47,16 @@ def list_jobs(
 
     if include_tag:
         query = query.join(JobTag, Job.id == JobTag.job_id).join(Tag, JobTag.tag_id == Tag.id).where(Tag.name.ilike(include_tag))
+
+    if exclude_tag:
+        exc = f"%{exclude_tag}%"
+        exclude_subq = (
+            select(JobTag)
+            .join(Tag, JobTag.tag_id == Tag.id)
+            .where(JobTag.job_id == Job.id)
+            .where(Tag.name.ilike(exc))
+        ).exists()
+        query = query.where(~exclude_subq)
 
     total = session.exec(select(func.count()).select_from(query.subquery())).one()
 
