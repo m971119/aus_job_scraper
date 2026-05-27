@@ -59,6 +59,7 @@ class ScrapeStatus(BaseModel):
 class JobOut(BaseModel):
     id: int
     seek_url: str
+    seek_urls: list[str] = []
     title: str
     company: Optional[str]
     description: Optional[str]

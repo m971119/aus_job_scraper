@@ -1,11 +1,12 @@
 import json
 from typing import Literal, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlmodel import Session, col, select
 from database import engine
 from models import Job, JobTag, Tag
 from schemas import JobOut, JobsPage, TagOut
+from scraper import SEEK_BASE
 
 router = APIRouter()
 
@@ -46,13 +47,10 @@ def list_jobs(
     if tag:
         query = query.join(JobTag, Job.id == JobTag.job_id).join(Tag, JobTag.tag_id == Tag.id).where(Tag.name.ilike(tag))
 
-    order = col(Job.latest_listing_date).desc() if sort == "latest" else col(Job.latest_listing_date).asc()
-    query = query.order_by(order)
+    total = session.exec(select(func.count()).select_from(query.subquery())).one()
 
-    all_jobs = session.exec(query).all()
-    total = len(all_jobs)
-    start = (page - 1) * page_size
-    jobs = all_jobs[start : start + page_size]
+    order = col(Job.latest_listing_date).desc() if sort == "latest" else col(Job.latest_listing_date).asc()
+    jobs = session.exec(query.order_by(order).offset((page - 1) * page_size).limit(page_size)).all()
 
     return JobsPage(items=[_to_out(j, session) for j in jobs], total=total, page=page, page_size=page_size)
 
@@ -85,7 +83,8 @@ def _get_job_tags(session: Session, job_id: int) -> list[TagOut]:
 def _to_out(j: Job, session: Session) -> JobOut:
     return JobOut(
         id=j.id,
-        seek_url=j.seek_url,
+        seek_url=f"{SEEK_BASE}{j.seek_url}",
+        seek_urls=[f"{SEEK_BASE}{p}" for p in json.loads(j.seek_urls or "[]")],
         title=j.title,
         company=j.company,
         description=j.description,
