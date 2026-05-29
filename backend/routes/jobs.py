@@ -1,5 +1,5 @@
 import json
-from typing import List, Literal, Optional
+from typing import Literal, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_
 from sqlmodel import Session, col, select
@@ -20,8 +20,8 @@ def get_session():
 def list_jobs(
     keyword: Optional[str] = Query(None),
     location: Optional[str] = Query(None),
-    include_tag: List[str] = Query(default=[]),
-    exclude_tag: List[str] = Query(default=[]),
+    include_tag: Optional[str] = Query(None),
+    exclude_tag: Optional[str] = Query(None),
     is_repost: Literal["all", "originals", "reposts"] = Query("all"),
     sort: Literal["latest", "oldest"] = Query("latest"),
     page: int = Query(1, ge=1),
@@ -46,15 +46,18 @@ def list_jobs(
             )
         )
 
-    if include_tag:
+    include_tags = [t.strip() for t in include_tag.split(",") if t.strip()] if include_tag else []
+    exclude_tags = [t.strip() for t in exclude_tag.split(",") if t.strip()] if exclude_tag else []
+
+    if include_tags:
         include_subq = (
             select(JobTag.job_id)
             .join(Tag, JobTag.tag_id == Tag.id)
-            .where(or_(*[Tag.name.ilike(t) for t in include_tag]))
+            .where(or_(*[Tag.name.ilike(t) for t in include_tags]))
         )
         query = query.where(Job.id.in_(include_subq))
 
-    for exc in exclude_tag:
+    for exc in exclude_tags:
         exclude_subq = (
             select(JobTag)
             .join(Tag, JobTag.tag_id == Tag.id)

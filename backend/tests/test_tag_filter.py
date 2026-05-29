@@ -105,7 +105,7 @@ def test_multi_include_tags_returns_union():
     tag_job(job1, python_id)
     tag_job(job2, react_id)
 
-    resp = client.get("/api/jobs?include_tag=Python&include_tag=React")
+    resp = client.get("/api/jobs?include_tag=Python,React")
     assert resp.status_code == 200
     ids = {j["id"] for j in resp.json()["items"]}
     assert ids == {job1, job2}
@@ -119,7 +119,7 @@ def test_multi_include_tags_no_duplicate_rows_when_job_has_both():
     tag_job(job1, python_id)
     tag_job(job1, react_id)
 
-    resp = client.get("/api/jobs?include_tag=Python&include_tag=React")
+    resp = client.get("/api/jobs?include_tag=Python,React")
     assert resp.status_code == 200
     assert resp.json()["total"] == 1
     assert len(resp.json()["items"]) == 1
@@ -127,7 +127,7 @@ def test_multi_include_tags_no_duplicate_rows_when_job_has_both():
 
 def test_multi_include_tags_all_unknown_returns_empty():
     make_job("url1")
-    resp = client.get("/api/jobs?include_tag=Foo&include_tag=Bar")
+    resp = client.get("/api/jobs?include_tag=Foo,Bar")
     assert resp.status_code == 200
     assert resp.json()["total"] == 0
 
@@ -181,7 +181,7 @@ def test_multi_exclude_tags_excludes_any_match():
     tag_job(job2, rejected_id)
     tag_job(job3, not_interested_id)
 
-    resp = client.get("/api/jobs?exclude_tag=Rejected&exclude_tag=NotInterested")
+    resp = client.get("/api/jobs?exclude_tag=Rejected,NotInterested")
     assert resp.status_code == 200
     ids = {j["id"] for j in resp.json()["items"]}
     assert ids == {job1}
@@ -234,10 +234,7 @@ def test_multi_include_and_multi_exclude_combined():
     tag_job(job3, rejected_id)
     tag_job(job4, not_interested_id)
 
-    resp = client.get(
-        "/api/jobs?include_tag=Python&include_tag=React"
-        "&exclude_tag=Rejected&exclude_tag=NotInterested"
-    )
+    resp = client.get("/api/jobs?include_tag=Python,React&exclude_tag=Rejected,NotInterested")
     assert resp.status_code == 200
     ids = {j["id"] for j in resp.json()["items"]}
     assert ids == {job1, job2}

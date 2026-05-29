@@ -18,8 +18,12 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
 
   const [keyword, setKeyword] = useState(searchParams.get("keyword") ?? "");
   const [location, setLocation] = useState(searchParams.get("location") ?? "");
-  const [includeTags, setIncludeTags] = useState<string[]>(searchParams.getAll("include_tag"));
-  const [excludeTags, setExcludeTags] = useState<string[]>(searchParams.getAll("exclude_tag"));
+  const [includeTags, setIncludeTags] = useState<string[]>(
+    searchParams.get("include_tag")?.split(",").filter(Boolean) ?? []
+  );
+  const [excludeTags, setExcludeTags] = useState<string[]>(
+    searchParams.get("exclude_tag")?.split(",").filter(Boolean) ?? []
+  );
   const [isRepost, setIsRepost] = useState<"all" | "originals" | "reposts">(
     (searchParams.get("is_repost") as "all" | "originals" | "reposts") ?? "all"
   );
@@ -55,8 +59,8 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
     const params = new URLSearchParams();
     if (keyword) params.set("keyword", keyword);
     if (location) params.set("location", location);
-    includeTags.forEach((t) => params.append("include_tag", t));
-    excludeTags.forEach((t) => params.append("exclude_tag", t));
+    if (includeTags.length) params.set("include_tag", includeTags.join(","));
+    if (excludeTags.length) params.set("exclude_tag", excludeTags.join(","));
     if (isRepost !== "all") params.set("is_repost", isRepost);
     if (sort !== "latest") params.set("sort", sort);
     const qs = params.toString();
@@ -67,8 +71,8 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
     const params = new URLSearchParams({ sort, page: String(p), page_size: String(pageSize) });
     if (keyword) params.set("keyword", keyword);
     if (location) params.set("location", location);
-    includeTags.forEach((t) => params.append("include_tag", t));
-    excludeTags.forEach((t) => params.append("exclude_tag", t));
+    if (includeTags.length) params.set("include_tag", includeTags.join(","));
+    if (excludeTags.length) params.set("exclude_tag", excludeTags.join(","));
     if (isRepost !== "all") params.set("is_repost", isRepost);
     return params;
   }, [keyword, location, includeTags, excludeTags, isRepost, sort, pageSize]);
