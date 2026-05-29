@@ -8,10 +8,11 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 interface Props {
   job: Job;
   allTags: Tag[];
+  sponsors: string[];
   onHide?: (id: number) => void;
 }
 
-export default function JobCard({ job, allTags, onHide }: Props) {
+export default function JobCard({ job, allTags, sponsors, onHide }: Props) {
   const [tags, setTags] = useState<Tag[]>(job.tags ?? []);
   const [panelOpen, setPanelOpen] = useState(false);
 

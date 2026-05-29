@@ -31,6 +31,7 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
     (searchParams.get("sort") as "latest" | "oldest") ?? "latest"
   );
   const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [sponsors, setSponsors] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [data, setData] = useState<JobsPage>({ items: [], total: 0, page: 1, page_size: 25 });
@@ -52,6 +53,10 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
 
   useEffect(() => {
     fetch(`${API}/api/tags`).then((r) => r.json()).then(setAllTags);
+  }, []);
+
+  useEffect(() => {
+    fetch(`${API}/api/sponsors`).then((r) => r.json()).then((d) => setSponsors(d.sponsors));
   }, []);
 
   // Sync filters to URL without triggering Next.js navigation
@@ -172,7 +177,7 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
       ) : (
         <div className="grid gap-4">
           {data.items.map((job) => (
-            <JobCard key={job.id} job={job} allTags={allTags} onHide={handleHide} />
+            <JobCard key={job.id} job={job} allTags={allTags} sponsors={sponsors} onHide={handleHide} />
           ))}
         </div>
       )}
