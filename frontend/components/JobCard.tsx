@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Job, Tag } from "@/types";
+import SponsorLookup from "./SponsorLookup";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -43,7 +44,10 @@ export default function JobCard({ job, allTags, sponsors, onHide }: Props) {
             {job.title}
           </Link>
           {job.company && (
-            <p className="text-navy font-medium mt-0.5">{job.company}</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-navy font-medium">{job.company}</p>
+              <SponsorLookup companyName={job.company} sponsors={sponsors} />
+            </div>
           )}
         </div>
         {job.is_repost && (
