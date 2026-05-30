@@ -1,36 +1,30 @@
 ## Business Requirements
 - A web application that scrapes and logs recent jobs from seek
-- Website origin: seek.com.au, linkedin
-- Please use playwright tool to scrape jobs from seek
-- Login using the email and password from .env, make sure to save session cookies so it doesn't login every round
-- Before saving the job to DB, do a search first to existing DB to prevent duplicates, if a job is listed on a different date, insert a  indicating duplicate posts 
+- Website origin: seek.com.au
+- Before saving a job to DB, search for an existing job matching by company + title (case-insensitive) when company is present. If a match is found and the seek_url is new, update the row: append the new url and date, mark the job reposted. Skip if the url already exists.
+- Allow users to sort the jobs by latest listing date
+- Allow users to view detailed job information
+- Allow users to "soft delete/hide" jobs that don't interest them, so that the system may know not to create that job again while scraping in the future.
+- Run the scraping job in the background and allow users to view the status of the scraping job in the frontend. The user should know how many pages there are to scrape and which page the job is currently at.
+- Allow users to cancel the scraping
+- Allow users to add custom tags to each job
+- Allow users to fuzzy lookup if the company sponsors
+
 
 
 ## Technical Details
 
+- Please use playwright tool to scrape jobs from seek
 - Implemented as a modern NextJS app, client rendered
 - The NextJS app should be created in a subdirectory `frontend`
 - The backend should be written in python using FastAPI
 - Everything packaged into a Docker container
-- Use SQLLite as Database, preserve the data when docker container stops
+- Use SQLite as Database, preserve the data when docker container stops
 - Use `uv` as the package manager for python in the Docker container
 - Start and Stop server scripts for Mac, PC, Linux in `scripts/`
 - No user management for the MVP
 - Use popular libraries
 - As simple as possible but with an elegant UI
-
-## Database tables and columns
-> Note: add more tables, columns or redesign the schema if you feel necessary
-1. Jobs
-    - state
-    - city
-    - suburb
-    - listed dates (plural since the same job might be listed multiple times)
-    - seek page url
-    - job title
-    - job description
-    - salary range
-
 
 ## Color Scheme
 
@@ -40,7 +34,7 @@
 - Dark Navy: `#032147` - main headings
 - Gray Text: `#888888` - supporting text, labels
 
-## Strategy
+## Bootstrap Strategy
 
 1. Write plan with success criteria for each phase to be checked off. Include project scaffolding, including .gitignore, and rigorous unit testing.
 2. Execute the plan ensuring all critiera are met
