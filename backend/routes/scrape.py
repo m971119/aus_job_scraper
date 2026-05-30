@@ -60,14 +60,14 @@ def _find_existing(session: Session, scraped) -> Job | None:
 
 def _apply_repost(existing: Job, scraped) -> None:
     urls = json.loads(existing.seek_urls or "[]")
-    if scraped.seek_url not in urls:
-        urls.append(scraped.seek_url)
-        existing.seek_urls = json.dumps(urls)
+    urls.append(scraped.seek_url)
+    existing.seek_urls = json.dumps(urls)
     existing.seek_url = scraped.seek_url
 
     dates = json.loads(existing.listed_dates or "[]")
-    dates.append(scraped.listed_date)
-    existing.listed_dates = json.dumps(dates)
+    if scraped.listed_date not in dates:
+        dates.append(scraped.listed_date)
+        existing.listed_dates = json.dumps(dates)
     existing.latest_listing_date = max(dates)
     existing.is_repost = True
     if scraped.description:
@@ -104,8 +104,8 @@ async def _run_scrape(req: ScrapeRequest) -> None:
                     if existing.is_hidden:
                         _state["skipped_hidden"] += 1
                     else:
-                        dates = json.loads(existing.listed_dates or "[]")
-                        if scraped.listed_date in dates:
+                        urls = json.loads(existing.seek_urls or "[]")
+                        if scraped.seek_url in urls:
                             pass  # same listing scraped again, skip
                         else:
                             _apply_repost(existing, scraped)
