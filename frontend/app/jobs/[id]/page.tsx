@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Job } from "@/types";
 import TagManager from "@/components/TagManager";
+import SponsorLookup from "@/components/SponsorLookup";
 
 function BackButton() {
   return (
@@ -26,12 +27,17 @@ export default function JobDetailPage({
   const { id } = use(params);
   const router = useRouter();
   const [job, setJob] = useState<Job | null>(null);
+  const [sponsors, setSponsors] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const handleHide = async () => {
     await fetch(`${API}/api/jobs/${id}/hide`, { method: "PATCH" });
     router.push("/");
   };
+
+  useEffect(() => {
+    fetch(`${API}/api/sponsors`).then((r) => r.json()).then((d) => setSponsors(d.sponsors));
+  }, []);
 
   useEffect(() => {
     fetch(`${API}/api/jobs/${id}`)
@@ -82,7 +88,10 @@ export default function JobDetailPage({
               </a>
             </h1>
             {job.company && (
-              <p className="text-primary font-medium mt-1">{job.company}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-primary font-medium">{job.company}</p>
+                <SponsorLookup companyName={job.company} sponsors={sponsors} />
+              </div>
             )}
           </div>
           {job.is_repost && (
