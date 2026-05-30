@@ -112,6 +112,8 @@ async def scrape_seek(
             await asyncio.sleep(random.uniform(1.5, 3.0))
 
         for i, job in enumerate(results, start=1):
+            if is_cancelled and is_cancelled():
+                break
             if on_progress:
                 on_progress(page_num, i)
             try:
