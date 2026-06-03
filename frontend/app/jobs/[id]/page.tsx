@@ -35,6 +35,11 @@ export default function JobDetailPage({
     router.push("/");
   };
 
+  const handleUnhide = async () => {
+    await fetch(`${API}/api/jobs/${id}/unhide`, { method: "PATCH" });
+    router.push("/");
+  };
+
   useEffect(() => {
     fetch(`${API}/api/sponsors`).then((r) => r.json()).then((d) => setSponsors(d.sponsors));
   }, []);
@@ -148,12 +153,21 @@ export default function JobDetailPage({
           >
             View on Seek &rarr;
           </a>
-          <button
-            onClick={handleHide}
-            className="text-sm text-muted hover:text-red-500 transition-colors px-3 py-2 rounded-lg hover:bg-red-50"
-          >
-            Not interested
-          </button>
+          {job.is_hidden ? (
+            <button
+              onClick={handleUnhide}
+              className="text-sm text-muted hover:text-green-600 transition-colors px-3 py-2 rounded-lg hover:bg-green-50"
+            >
+              Unhide
+            </button>
+          ) : (
+            <button
+              onClick={handleHide}
+              className="text-sm text-muted hover:text-red-500 transition-colors px-3 py-2 rounded-lg hover:bg-red-50"
+            >
+              Not interested
+            </button>
+          )}
         </div>
       </div>
     </main>
