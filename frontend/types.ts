@@ -17,6 +17,7 @@ export interface Job {
   latest_listing_date: string | null;
   is_repost: boolean;
   is_hidden: boolean;
+  notes: string | null;
   tags: Tag[];
 }
 
