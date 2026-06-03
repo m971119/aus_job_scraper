@@ -3,6 +3,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
+import DOMPurify from "dompurify";
 import { useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -62,11 +63,16 @@ export default function NotesEditor({ jobId, initialNotes }: Props) {
       const content = editor.isEmpty ? null : editor.getHTML();
       setHtml(content);
       setEditing(false);
-      await fetch(`${API}/api/jobs/${jobId}/notes`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notes: content }),
-      });
+      try {
+        const res = await fetch(`${API}/api/jobs/${jobId}/notes`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ notes: content }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      } catch (err) {
+        console.error("Failed to save notes:", err);
+      }
     },
   });
 
@@ -147,7 +153,10 @@ export default function NotesEditor({ jobId, initialNotes }: Props) {
               1. List
             </ToolbarBtn>
             {linkOpen ? (
-              <div className="flex items-center gap-1">
+              <div
+                className="flex items-center gap-1"
+                onMouseDown={(e) => e.preventDefault()}
+              >
                 <input
                   type="url"
                   value={linkUrl}
@@ -189,13 +198,10 @@ export default function NotesEditor({ jobId, initialNotes }: Props) {
           className="cursor-pointer px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 min-h-[60px] hover:border-primary/40 transition-colors"
         >
           {html ? (
-            <>
-              {/* notes HTML is self-authored via TipTap — XSS risk is acceptable for single-user use */}
-              <div
-                className="notes-content text-sm leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: html }}
-              />
-            </>
+            <div
+              className="notes-content text-sm leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
+            />
           ) : (
             <p className="text-muted text-sm italic">No notes yet.</p>
           )}
