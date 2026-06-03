@@ -23,12 +23,17 @@ def list_jobs(
     include_tag: Optional[str] = Query(None),
     exclude_tag: Optional[str] = Query(None),
     is_repost: Literal["all", "originals", "reposts"] = Query("all"),
+    visibility: Literal["visible", "hidden", "all"] = Query("visible"),
     sort: Literal["latest", "oldest"] = Query("latest"),
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=100),
     session: Session = Depends(get_session),
 ):
-    query = select(Job).where(Job.is_hidden == False)  # noqa: E712
+    query = select(Job)
+    if visibility == "visible":
+        query = query.where(Job.is_hidden == False)  # noqa: E712
+    elif visibility == "hidden":
+        query = query.where(Job.is_hidden == True)  # noqa: E712
 
     if keyword:
         kw = f"%{keyword}%"
@@ -93,6 +98,18 @@ def hide_job(job_id: int, session: Session = Depends(get_session)):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     job.is_hidden = True
+    session.add(job)
+    session.commit()
+    session.refresh(job)
+    return _to_out(job, session)
+
+
+@router.patch("/jobs/{job_id}/unhide", response_model=JobOut)
+def unhide_job(job_id: int, session: Session = Depends(get_session)):
+    job = session.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    job.is_hidden = False
     session.add(job)
     session.commit()
     session.refresh(job)

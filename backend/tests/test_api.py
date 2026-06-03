@@ -225,3 +225,68 @@ async def test_hidden_job_skipped_on_rescrape():
 
     assert scrape_module._state["skipped_hidden"] == 1
     assert scrape_module._state["inserted"] == 0
+
+
+def test_visibility_hidden_returns_only_hidden():
+    with Session(engine) as s:
+        s.add(make_job(seek_url="https://seek.com.au/job/1", title="Visible"))
+        j = make_job(seek_url="https://seek.com.au/job/2", title="Hidden")
+        j.is_hidden = True
+        s.add(j)
+        s.commit()
+
+    resp = client.get("/api/jobs?visibility=hidden")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 1
+    assert data["items"][0]["title"] == "Hidden"
+    assert data["items"][0]["is_hidden"] is True
+
+
+def test_visibility_all_returns_all_jobs():
+    with Session(engine) as s:
+        s.add(make_job(seek_url="https://seek.com.au/job/1", title="Visible"))
+        j = make_job(seek_url="https://seek.com.au/job/2", title="Hidden")
+        j.is_hidden = True
+        s.add(j)
+        s.commit()
+
+    resp = client.get("/api/jobs?visibility=all")
+    assert resp.status_code == 200
+    assert resp.json()["total"] == 2
+
+
+def test_visibility_visible_is_default():
+    with Session(engine) as s:
+        s.add(make_job(seek_url="https://seek.com.au/job/1", title="Visible"))
+        j = make_job(seek_url="https://seek.com.au/job/2", title="Hidden")
+        j.is_hidden = True
+        s.add(j)
+        s.commit()
+
+    resp = client.get("/api/jobs")
+    assert resp.json()["total"] == 1
+    assert resp.json()["items"][0]["title"] == "Visible"
+
+
+def test_unhide_job():
+    with Session(engine) as s:
+        j = make_job(seek_url="https://seek.com.au/job/1", title="Was Hidden")
+        j.is_hidden = True
+        s.add(j)
+        s.commit()
+        s.refresh(j)
+        job_id = j.id
+
+    resp = client.patch(f"/api/jobs/{job_id}/unhide")
+    assert resp.status_code == 200
+    assert resp.json()["is_hidden"] is False
+
+    list_resp = client.get("/api/jobs")
+    titles = [j["title"] for j in list_resp.json()["items"]]
+    assert "Was Hidden" in titles
+
+
+def test_unhide_job_not_found():
+    resp = client.patch("/api/jobs/99999/unhide")
+    assert resp.status_code == 404
