@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Job } from "@/types";
 import TagManager from "@/components/TagManager";
+import NotesEditor from "@/components/NotesEditor";
 import SponsorLookup from "@/components/SponsorLookup";
 
 function BackButton() {
@@ -143,6 +144,8 @@ export default function JobDetailPage({
         </div>
 
         <TagManager jobId={job.id} initialTags={job.tags ?? []} />
+
+        <NotesEditor jobId={job.id} initialNotes={job.notes ?? null} />
 
         <div className="mt-6 flex items-center gap-3">
           <a
