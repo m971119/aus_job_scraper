@@ -30,13 +30,16 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
   const [sort, setSort] = useState<"latest" | "oldest">(
     (searchParams.get("sort") as "latest" | "oldest") ?? "latest"
   );
+  const [visibility, setVisibility] = useState<"visible" | "hidden" | "all">(
+    (searchParams.get("visibility") as "visible" | "hidden" | "all") ?? "visible"
+  );
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [sponsors, setSponsors] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [data, setData] = useState<JobsPage>({ items: [], total: 0, page: 1, page_size: 25 });
 
-  const hasActiveFilters = !!(keyword || location || includeTags.length || excludeTags.length || isRepost !== "all" || sort !== "latest");
+  const hasActiveFilters = !!(keyword || location || includeTags.length || excludeTags.length || isRepost !== "all" || sort !== "latest" || visibility !== "visible");
 
   const resetFilters = useCallback(() => {
     setKeyword("");
@@ -45,6 +48,7 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
     setExcludeTags([]);
     setIsRepost("all");
     setSort("latest");
+    setVisibility("visible");
   }, []);
 
   useEffect(() => {
@@ -67,10 +71,11 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
     if (includeTags.length) params.set("include_tag", includeTags.join(","));
     if (excludeTags.length) params.set("exclude_tag", excludeTags.join(","));
     if (isRepost !== "all") params.set("is_repost", isRepost);
+    if (visibility !== "visible") params.set("visibility", visibility);
     if (sort !== "latest") params.set("sort", sort);
     const qs = params.toString();
     window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
-  }, [keyword, location, includeTags, excludeTags, isRepost, sort]);
+  }, [keyword, location, includeTags, excludeTags, isRepost, visibility, sort]);
 
   const buildParams = useCallback((p: number) => {
     const params = new URLSearchParams({ sort, page: String(p), page_size: String(pageSize) });
@@ -79,13 +84,14 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
     if (includeTags.length) params.set("include_tag", includeTags.join(","));
     if (excludeTags.length) params.set("exclude_tag", excludeTags.join(","));
     if (isRepost !== "all") params.set("is_repost", isRepost);
+    if (visibility !== "visible") params.set("visibility", visibility);
     return params;
-  }, [keyword, location, includeTags, excludeTags, isRepost, sort, pageSize]);
+  }, [keyword, location, includeTags, excludeTags, isRepost, visibility, sort, pageSize]);
 
   // Reset page when filters change (not page itself)
   useEffect(() => {
     setPage(1);
-  }, [keyword, location, includeTags, excludeTags, isRepost, sort, pageSize, refreshKey]);
+  }, [keyword, location, includeTags, excludeTags, isRepost, visibility, sort, pageSize, refreshKey]);
 
   // Single fetch effect — AbortController cancels any in-flight request
   useEffect(() => {
@@ -102,6 +108,11 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
   const handleHide = async (id: number) => {
     setData((prev) => ({ ...prev, items: prev.items.filter((j) => j.id !== id), total: prev.total - 1 }));
     await fetch(`${API}/api/jobs/${id}/hide`, { method: "PATCH" });
+  };
+
+  const handleUnhide = async (id: number) => {
+    setData((prev) => ({ ...prev, items: prev.items.filter((j) => j.id !== id), total: prev.total - 1 }));
+    await fetch(`${API}/api/jobs/${id}/unhide`, { method: "PATCH" });
   };
 
   return (
@@ -123,7 +134,16 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
             className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
           />
         </div>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-5 gap-3">
+          <select
+            value={visibility}
+            onChange={(e) => setVisibility(e.target.value as "visible" | "hidden" | "all")}
+            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white text-gray-700"
+          >
+            <option value="visible">Active jobs</option>
+            <option value="hidden">Hidden jobs</option>
+            <option value="all">All jobs</option>
+          </select>
           <TagMultiSelect
             label="Include tags"
             tags={allTags}
@@ -177,7 +197,7 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
       ) : (
         <div className="grid gap-4">
           {data.items.map((job) => (
-            <JobCard key={job.id} job={job} allTags={allTags} sponsors={sponsors} onHide={handleHide} />
+            <JobCard key={job.id} job={job} allTags={allTags} sponsors={sponsors} onHide={handleHide} onUnhide={handleUnhide} />
           ))}
         </div>
       )}
