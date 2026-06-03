@@ -20,6 +20,10 @@ class TagCreate(BaseModel):
         return v.strip()
 
 
+class NotesUpdate(BaseModel):
+    notes: Optional[str] = None
+
+
 class ScrapedJob(BaseModel):
     seek_url: str
     title: str
@@ -71,6 +75,7 @@ class JobOut(BaseModel):
     latest_listing_date: Optional[str]
     is_repost: bool
     is_hidden: bool
+    notes: Optional[str] = None
     tags: list[TagOut] = []
 
     model_config = {"from_attributes": True}

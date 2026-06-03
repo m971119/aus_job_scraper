@@ -28,5 +28,6 @@ class Job(SQLModel, table=True):
     latest_listing_date: Optional[str] = Field(default=None, index=True)
     is_repost: bool = Field(default=False)
     is_hidden: bool = Field(default=False)
+    notes: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

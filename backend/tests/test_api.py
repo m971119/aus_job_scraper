@@ -290,3 +290,48 @@ def test_unhide_job():
 def test_unhide_job_not_found():
     resp = client.patch("/api/jobs/99999/unhide")
     assert resp.status_code == 404
+
+
+def test_update_notes():
+    with Session(engine) as s:
+        j = make_job(seek_url="https://seek.com.au/job/1", title="Dev")
+        s.add(j)
+        s.commit()
+        s.refresh(j)
+        job_id = j.id
+
+    resp = client.patch(f"/api/jobs/{job_id}/notes", json={"notes": "<p>Great role</p>"})
+    assert resp.status_code == 200
+    assert resp.json()["notes"] == "<p>Great role</p>"
+
+
+def test_update_notes_clears_to_null():
+    with Session(engine) as s:
+        j = make_job(seek_url="https://seek.com.au/job/1", title="Dev")
+        s.add(j)
+        s.commit()
+        s.refresh(j)
+        job_id = j.id
+
+    client.patch(f"/api/jobs/{job_id}/notes", json={"notes": "<p>Old notes</p>"})
+    resp = client.patch(f"/api/jobs/{job_id}/notes", json={"notes": None})
+    assert resp.status_code == 200
+    assert resp.json()["notes"] is None
+
+
+def test_update_notes_not_found():
+    resp = client.patch("/api/jobs/99999/notes", json={"notes": "<p>Test</p>"})
+    assert resp.status_code == 404
+
+
+def test_notes_returned_in_job_list():
+    with Session(engine) as s:
+        j = make_job(seek_url="https://seek.com.au/job/1", title="Dev")
+        s.add(j)
+        s.commit()
+        s.refresh(j)
+        job_id = j.id
+
+    client.patch(f"/api/jobs/{job_id}/notes", json={"notes": "<p>Some notes</p>"})
+    resp = client.get("/api/jobs")
+    assert resp.json()["items"][0]["notes"] == "<p>Some notes</p>"

@@ -5,7 +5,7 @@ from sqlalchemy import func, or_
 from sqlmodel import Session, col, select
 from database import engine
 from models import Job, JobTag, Tag
-from schemas import JobOut, JobsPage, TagOut
+from schemas import JobOut, JobsPage, NotesUpdate, TagOut
 from scraper import SEEK_BASE
 
 router = APIRouter()
@@ -116,6 +116,18 @@ def unhide_job(job_id: int, session: Session = Depends(get_session)):
     return _to_out(job, session)
 
 
+@router.patch("/jobs/{job_id}/notes", response_model=JobOut)
+def update_notes(job_id: int, body: NotesUpdate, session: Session = Depends(get_session)):
+    job = session.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    job.notes = body.notes
+    session.add(job)
+    session.commit()
+    session.refresh(job)
+    return _to_out(job, session)
+
+
 def _get_job_tags(session: Session, job_id: int) -> list[TagOut]:
     rows = session.exec(select(Tag).join(JobTag).where(JobTag.job_id == job_id)).all()
     return [TagOut(id=t.id, name=t.name) for t in rows]
@@ -137,5 +149,6 @@ def _to_out(j: Job, session: Session) -> JobOut:
         latest_listing_date=j.latest_listing_date,
         is_repost=j.is_repost,
         is_hidden=j.is_hidden,
+        notes=j.notes,
         tags=_get_job_tags(session, j.id),
     )
