@@ -11,9 +11,10 @@ interface Props {
   allTags: Tag[];
   sponsors: string[];
   onHide?: (id: number) => void;
+  onUnhide?: (id: number) => void;
 }
 
-export default function JobCard({ job, allTags, sponsors, onHide }: Props) {
+export default function JobCard({ job, allTags, sponsors, onHide, onUnhide }: Props) {
   const [tags, setTags] = useState<Tag[]>(job.tags ?? []);
   const [panelOpen, setPanelOpen] = useState(false);
 
@@ -141,7 +142,15 @@ export default function JobCard({ job, allTags, sponsors, onHide }: Props) {
         >
           View details
         </Link>
-        {onHide && (
+        {job.is_hidden && onUnhide && (
+          <button
+            onClick={() => onUnhide(job.id)}
+            className="text-xs text-muted hover:text-green-600 transition-colors px-2 py-1 rounded hover:bg-green-50"
+          >
+            Unhide
+          </button>
+        )}
+        {!job.is_hidden && onHide && (
           <button
             onClick={() => onHide(job.id)}
             className="text-xs text-muted hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50"
