@@ -42,6 +42,8 @@ function ToolbarBtn({
 export default function NotesEditor({ jobId, initialNotes }: Props) {
   const [editing, setEditing] = useState(false);
   const [html, setHtml] = useState<string | null>(initialNotes);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
 
   const editor = useEditor({
     extensions: [
@@ -74,11 +76,24 @@ export default function NotesEditor({ jobId, initialNotes }: Props) {
     setTimeout(() => editor?.commands.focus(), 0);
   };
 
-  const setLink = () => {
+  const openLinkInput = () => {
+    const existing = editor?.getAttributes("link").href ?? "";
+    setLinkUrl(existing);
+    setLinkOpen(true);
+  };
+
+  const applyLink = () => {
     if (!editor) return;
-    const url = window.prompt("URL");
-    if (url) editor.chain().focus().setLink({ href: url }).run();
+    if (linkUrl.trim()) editor.chain().focus().setLink({ href: linkUrl.trim() }).run();
     else editor.chain().focus().unsetLink().run();
+    setLinkOpen(false);
+    setLinkUrl("");
+  };
+
+  const cancelLink = () => {
+    setLinkOpen(false);
+    setLinkUrl("");
+    editor?.commands.focus();
   };
 
   return (
@@ -92,7 +107,7 @@ export default function NotesEditor({ jobId, initialNotes }: Props) {
             onClick={handleEdit}
             className="text-xs text-muted hover:text-primary border border-gray-200 hover:border-primary px-2 py-0.5 rounded transition-colors"
           >
-            ✏ Edit
+            Edit
           </button>
         )}
       </div>
@@ -131,9 +146,40 @@ export default function NotesEditor({ jobId, initialNotes }: Props) {
             >
               1. List
             </ToolbarBtn>
-            <ToolbarBtn onClick={setLink} active={editor?.isActive("link")}>
-              Link
-            </ToolbarBtn>
+            {linkOpen ? (
+              <div className="flex items-center gap-1">
+                <input
+                  type="url"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { e.preventDefault(); applyLink(); }
+                    if (e.key === "Escape") { e.preventDefault(); cancelLink(); }
+                  }}
+                  placeholder="https://..."
+                  autoFocus
+                  className="text-xs border border-gray-300 rounded px-2 py-0.5 w-40 focus:outline-none focus:border-primary"
+                />
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); applyLink(); }}
+                  className="text-xs border border-primary rounded px-2 py-0.5 bg-primary/10 text-primary"
+                >
+                  OK
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); cancelLink(); }}
+                  className="text-xs border border-gray-200 rounded px-2 py-0.5 text-gray-500"
+                >
+                  X
+                </button>
+              </div>
+            ) : (
+              <ToolbarBtn onClick={openLinkInput} active={editor?.isActive("link")}>
+                Link
+              </ToolbarBtn>
+            )}
           </div>
           <EditorContent editor={editor} />
         </div>
@@ -143,10 +189,13 @@ export default function NotesEditor({ jobId, initialNotes }: Props) {
           className="cursor-pointer px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 min-h-[60px] hover:border-primary/40 transition-colors"
         >
           {html ? (
-            <div
-              className="notes-content text-sm leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
+            <>
+              {/* notes HTML is self-authored via TipTap — XSS risk is acceptable for single-user use */}
+              <div
+                className="notes-content text-sm leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: html }}
+              />
+            </>
           ) : (
             <p className="text-muted text-sm italic">No notes yet.</p>
           )}
