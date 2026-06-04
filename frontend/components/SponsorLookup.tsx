@@ -35,6 +35,8 @@ export default function SponsorLookup({ companyName, sponsors }: Props) {
     [fuse, query]
   );
 
+  if (sponsors.length === 0) return null;
+
   return (
     <div className="relative" ref={ref}>
       <button
