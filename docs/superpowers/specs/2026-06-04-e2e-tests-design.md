@@ -86,7 +86,11 @@ The seed script is called from `global-setup.ts` using `execSync('uv run python 
 
 ```yaml
 # .github/workflows/e2e.yml
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 jobs:
   e2e:
     runs-on: ubuntu-latest
