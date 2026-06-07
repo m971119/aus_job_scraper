@@ -5,7 +5,7 @@ from sqlalchemy import func, or_
 from sqlmodel import Session, col, select
 from database import engine
 from models import Job, JobTag, Tag
-from schemas import JobOut, JobsPage, NotesUpdate, TagOut
+from schemas import JobOut, JobsPage, NotesUpdate, StatusUpdate, TagOut
 from scraper import SEEK_BASE
 
 router = APIRouter()
@@ -24,6 +24,8 @@ def list_jobs(
     exclude_tag: Optional[str] = Query(None),
     is_repost: Literal["all", "originals", "reposts"] = Query("all"),
     visibility: Literal["visible", "hidden", "all"] = Query("visible"),
+    status: Optional[str] = Query(None),
+    not_saved: bool = Query(False),
     sort: Literal["latest", "oldest"] = Query("latest"),
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=100),
@@ -75,6 +77,11 @@ def list_jobs(
         query = query.where(Job.is_repost == False)  # noqa: E712
     elif is_repost == "reposts":
         query = query.where(Job.is_repost == True)  # noqa: E712
+
+    if not_saved:
+        query = query.where(Job.status != "SAVED")
+    elif status:
+        query = query.where(Job.status == status)
 
     total = session.exec(select(func.count()).select_from(query.subquery())).one()
 
@@ -128,6 +135,18 @@ def update_notes(job_id: int, body: NotesUpdate, session: Session = Depends(get_
     return _to_out(job, session)
 
 
+@router.patch("/jobs/{job_id}/status", response_model=JobOut)
+def update_status(job_id: int, body: StatusUpdate, session: Session = Depends(get_session)):
+    job = session.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    job.status = body.status
+    session.add(job)
+    session.commit()
+    session.refresh(job)
+    return _to_out(job, session)
+
+
 def _get_job_tags(session: Session, job_id: int) -> list[TagOut]:
     rows = session.exec(select(Tag).join(JobTag).where(JobTag.job_id == job_id)).all()
     return [TagOut(id=t.id, name=t.name) for t in rows]
@@ -149,6 +168,7 @@ def _to_out(j: Job, session: Session) -> JobOut:
         latest_listing_date=j.latest_listing_date,
         is_repost=j.is_repost,
         is_hidden=j.is_hidden,
+        status=j.status,
         notes=j.notes,
         tags=_get_job_tags(session, j.id),
     )

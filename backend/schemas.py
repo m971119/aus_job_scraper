@@ -24,6 +24,10 @@ class NotesUpdate(BaseModel):
     notes: Optional[str] = None
 
 
+class StatusUpdate(BaseModel):
+    status: str
+
+
 class ScrapedJob(BaseModel):
     seek_url: str
     title: str
@@ -76,6 +80,7 @@ class JobOut(BaseModel):
     is_repost: bool
     is_hidden: bool
     notes: Optional[str] = None
+    status: str = "SAVED"
     tags: list[TagOut] = []
 
     model_config = {"from_attributes": True}
