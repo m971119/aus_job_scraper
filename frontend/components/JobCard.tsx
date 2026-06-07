@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Job, Tag } from "@/types";
 import SponsorLookup from "./SponsorLookup";
+import StatusBadge from "./StatusBadge";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -51,11 +52,14 @@ export default function JobCard({ job, allTags, sponsors, onHide, onUnhide }: Pr
             </div>
           )}
         </div>
-        {job.is_repost && (
-          <span className="shrink-0 text-xs font-semibold px-2 py-1 rounded-full bg-accent/20 text-accent border border-accent/40">
-            Reposted
-          </span>
-        )}
+        <div className="flex shrink-0 items-center gap-1.5">
+          <StatusBadge status={job.status} />
+          {job.is_repost && (
+            <span className="text-xs font-semibold px-2 py-1 rounded-full bg-accent/20 text-accent border border-accent/40">
+              Reposted
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
