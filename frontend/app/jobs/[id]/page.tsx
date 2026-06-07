@@ -6,6 +6,8 @@ import { Job } from "@/types";
 import TagManager from "@/components/TagManager";
 import NotesEditor from "@/components/NotesEditor";
 import SponsorLookup from "@/components/SponsorLookup";
+import StatusBadge, { JOB_STATUSES, STATUS_LABELS } from "@/components/StatusBadge";
+import { JobStatus } from "@/types";
 
 function BackButton() {
   return (
@@ -30,6 +32,7 @@ export default function JobDetailPage({
   const [job, setJob] = useState<Job | null>(null);
   const [sponsors, setSponsors] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<JobStatus>("SAVED");
 
   const handleHide = async () => {
     await fetch(`${API}/api/jobs/${id}/hide`, { method: "PATCH" });
@@ -39,6 +42,15 @@ export default function JobDetailPage({
   const handleUnhide = async () => {
     await fetch(`${API}/api/jobs/${id}/unhide`, { method: "PATCH" });
     router.push("/");
+  };
+
+  const handleStatusChange = async (newStatus: JobStatus) => {
+    setStatus(newStatus);
+    await fetch(`${API}/api/jobs/${id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus }),
+    });
   };
 
   useEffect(() => {
@@ -54,6 +66,10 @@ export default function JobDetailPage({
       .then(setJob)
       .catch((e) => setError(e.message));
   }, [id]);
+
+  useEffect(() => {
+    if (job) setStatus(job.status);
+  }, [job]);
 
   if (error) {
     return (
@@ -99,6 +115,20 @@ export default function JobDetailPage({
                 <SponsorLookup companyName={job.company} sponsors={sponsors} />
               </div>
             )}
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-xs text-muted font-medium">Status</span>
+              <select
+                value={status}
+                onChange={(e) => handleStatusChange(e.target.value as JobStatus)}
+                className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                {JOB_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {STATUS_LABELS[s]}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           {job.is_repost && (
             <span className="shrink-0 text-xs font-semibold px-2 py-1 rounded-full bg-accent/20 text-accent border border-accent/40">
