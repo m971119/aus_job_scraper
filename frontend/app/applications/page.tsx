@@ -9,7 +9,7 @@ const PAGE_SIZE = 25;
 type Tab = "ALL" | JobStatus;
 
 const TABS: { value: Tab; label: string }[] = [
-  { value: "ALL", label: "All Applied" },
+  { value: "ALL", label: "All" },
   { value: "APPLIED", label: "Applied" },
   { value: "INTERVIEWING", label: "Interviewing" },
   { value: "OFFER", label: "Offer" },

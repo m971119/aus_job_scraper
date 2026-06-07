@@ -32,7 +32,7 @@ export default function JobDetailPage({
   const [job, setJob] = useState<Job | null>(null);
   const [sponsors, setSponsors] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<JobStatus>("SAVED");
+  const [status, setStatus] = useState<JobStatus | null>(null);
 
   const handleHide = async () => {
     await fetch(`${API}/api/jobs/${id}/hide`, { method: "PATCH" });
@@ -63,13 +63,9 @@ export default function JobDetailPage({
         if (!r.ok) throw new Error("Job not found");
         return r.json();
       })
-      .then(setJob)
+      .then((d) => { setJob(d); setStatus(d.status); })
       .catch((e) => setError(e.message));
   }, [id]);
-
-  useEffect(() => {
-    if (job) setStatus(job.status);
-  }, [job]);
 
   if (error) {
     return (
@@ -118,7 +114,7 @@ export default function JobDetailPage({
             <div className="mt-2 flex items-center gap-2">
               <span className="text-xs text-muted font-medium">Status</span>
               <select
-                value={status}
+                value={status ?? "SAVED"}
                 onChange={(e) => handleStatusChange(e.target.value as JobStatus)}
                 className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary"
               >
