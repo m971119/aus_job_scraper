@@ -1,5 +1,5 @@
 from pydantic import BaseModel, field_validator
-from typing import Optional
+from typing import Literal, Optional
 
 
 class TagOut(BaseModel):
@@ -24,8 +24,11 @@ class NotesUpdate(BaseModel):
     notes: Optional[str] = None
 
 
+JobStatus = Literal["SAVED", "APPLIED", "INTERVIEWING", "OFFER", "ACCEPTED", "REJECTED", "WITHDRAWN", "GHOSTED"]
+
+
 class StatusUpdate(BaseModel):
-    status: str
+    status: JobStatus
 
 
 class ScrapedJob(BaseModel):
