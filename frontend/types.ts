@@ -1,3 +1,13 @@
+export type JobStatus =
+  | "SAVED"
+  | "APPLIED"
+  | "INTERVIEWING"
+  | "OFFER"
+  | "ACCEPTED"
+  | "REJECTED"
+  | "WITHDRAWN"
+  | "GHOSTED";
+
 export interface Tag {
   id: number;
   name: string;
@@ -17,6 +27,7 @@ export interface Job {
   latest_listing_date: string | null;
   is_repost: boolean;
   is_hidden: boolean;
+  status: JobStatus;
   notes: string | null;
   tags: Tag[];
 }
