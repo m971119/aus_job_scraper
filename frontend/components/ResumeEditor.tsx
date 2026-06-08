@@ -87,10 +87,11 @@ export default function ResumeEditor() {
   const handlePrint = () => {
     const win = window.open("", "_blank");
     if (!win) return;
+    win.document.open();
     win.document.write(content);
     win.document.close();
     win.focus();
-    win.onload = () => win.print();
+    win.print();
   };
 
   return (
