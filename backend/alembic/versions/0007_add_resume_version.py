@@ -20,7 +20,7 @@ def upgrade() -> None:
         op.create_table(
             "resume_version",
             sa.Column("id", sa.Integer(), nullable=False),
-            sa.Column("label", sa.String(), nullable=False),
+            sa.Column("label", sa.Text(), nullable=False),
             sa.Column("content", sa.Text(), nullable=False),
             sa.Column("created_at", sa.DateTime(), nullable=False),
             sa.PrimaryKeyConstraint("id"),
