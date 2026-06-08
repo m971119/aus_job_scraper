@@ -20,6 +20,7 @@ export default function ResumeEditor() {
   const [selectedId, setSelectedId] = useState<number | "">("");
   const [overflow, setOverflow] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -43,14 +44,15 @@ export default function ResumeEditor() {
   }, [content]);
 
   useEffect(() => {
-    if (!debouncedContent) return;
-    const t = setTimeout(() => {
-      const h =
-        iframeRef.current?.contentDocument?.documentElement?.scrollHeight ?? 0;
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    const onLoad = () => {
+      const h = iframe.contentDocument?.documentElement?.scrollHeight ?? 0;
       setOverflow(h > A4_HEIGHT_PX);
-    }, 150);
-    return () => clearTimeout(t);
-  }, [debouncedContent]);
+    };
+    iframe.addEventListener("load", onLoad);
+    return () => iframe.removeEventListener("load", onLoad);
+  }, []);
 
   const loadVersion = async (id: number) => {
     const resp = await fetch(`${API}/api/resume/versions/${id}`);
@@ -63,16 +65,23 @@ export default function ResumeEditor() {
   const handleSave = async () => {
     if (!label.trim() || saving) return;
     setSaving(true);
-    const resp = await fetch(`${API}/api/resume/versions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label: label.trim(), content }),
-    });
-    const v = await resp.json();
-    setVersions((prev) => [v, ...prev]);
-    setSelectedId(v.id);
-    setLabel("");
-    setSaving(false);
+    setSaveError(null);
+    try {
+      const resp = await fetch(`${API}/api/resume/versions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: label.trim(), content }),
+      });
+      if (!resp.ok) throw new Error(`Save failed: ${resp.status}`);
+      const v = await resp.json();
+      setVersions((prev) => [v, ...prev]);
+      setSelectedId(v.id);
+      setLabel("");
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handlePrint = () => {
@@ -81,7 +90,7 @@ export default function ResumeEditor() {
     win.document.write(content);
     win.document.close();
     win.focus();
-    win.print();
+    win.onload = () => win.print();
   };
 
   return (
@@ -153,6 +162,9 @@ export default function ResumeEditor() {
           placeholder="Version label..."
           className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 w-48 focus:outline-none focus:ring-2 focus:ring-primary"
         />
+        {saveError && (
+          <span className="text-xs text-red-500">{saveError}</span>
+        )}
         <button
           onClick={handleSave}
           disabled={!label.trim() || saving}
