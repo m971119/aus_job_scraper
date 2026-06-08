@@ -43,16 +43,6 @@ export default function ResumeEditor() {
     return () => clearTimeout(t);
   }, [content]);
 
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-    const onLoad = () => {
-      const h = iframe.contentDocument?.documentElement?.scrollHeight ?? 0;
-      setOverflow(h > A4_HEIGHT_PX);
-    };
-    iframe.addEventListener("load", onLoad);
-    return () => iframe.removeEventListener("load", onLoad);
-  }, []);
 
   const loadVersion = async (id: number) => {
     const resp = await fetch(`${API}/api/resume/versions/${id}`);
@@ -118,6 +108,11 @@ export default function ResumeEditor() {
             <iframe
               ref={iframeRef}
               srcDoc={debouncedContent}
+              onLoad={() => {
+                const h =
+                  iframeRef.current?.contentDocument?.documentElement?.scrollHeight ?? 0;
+                setOverflow(h > A4_HEIGHT_PX);
+              }}
               style={{
                 width: "210mm",
                 height: "297mm",

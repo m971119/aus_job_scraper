@@ -117,3 +117,10 @@ class ResumeVersionOut(BaseModel):
 class ResumeVersionCreate(BaseModel):
     label: str
     content: str
+
+    @field_validator("label")
+    @classmethod
+    def label_not_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("label must not be empty")
+        return v.strip()
