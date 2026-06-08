@@ -15,6 +15,7 @@ export default function Nav() {
           {[
             { href: "/", label: "Job Listings" },
             { href: "/applications", label: "Applications" },
+            { href: "/resume", label: "Resume" },
           ].map(({ href, label }) => (
             <Link
               key={href}
