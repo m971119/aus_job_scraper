@@ -28,4 +28,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_table("resume_version")
+    conn = op.get_bind()
+    if "resume_version" in inspect(conn).get_table_names():
+        op.drop_table("resume_version")
