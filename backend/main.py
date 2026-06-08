@@ -3,14 +3,17 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import create_db
 from routes import jobs, scrape, tags, sponsors
+from routes.resume import router as resume_router, seed_resume
 import os
 import logging
 
 logging.basicConfig(level=logging.INFO)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_db()
+    seed_resume()
     yield
 
 
@@ -27,6 +30,7 @@ app.include_router(jobs.router, prefix="/api")
 app.include_router(scrape.router, prefix="/api")
 app.include_router(tags.router, prefix="/api")
 app.include_router(sponsors.router, prefix="/api")
+app.include_router(resume_router, prefix="/api")
 
 
 @app.get("/health")

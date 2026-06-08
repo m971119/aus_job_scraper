@@ -32,3 +32,11 @@ class Job(SQLModel, table=True):
     notes: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class ResumeVersion(SQLModel, table=True):
+    __tablename__ = "resume_version"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    label: str
+    content: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

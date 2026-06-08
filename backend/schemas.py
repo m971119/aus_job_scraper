@@ -1,5 +1,6 @@
 from pydantic import BaseModel, field_validator
 from typing import Literal, Optional
+from datetime import datetime
 
 
 class TagOut(BaseModel):
@@ -94,3 +95,25 @@ class JobsPage(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class ResumeVersionMeta(BaseModel):
+    id: int
+    label: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ResumeVersionOut(BaseModel):
+    id: int
+    label: str
+    content: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ResumeVersionCreate(BaseModel):
+    label: str
+    content: str
