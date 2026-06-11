@@ -6,6 +6,8 @@ import { Job, ResumeVersionMeta } from "@/types";
 import TagManager from "@/components/TagManager";
 import NotesEditor from "@/components/NotesEditor";
 import SponsorLookup from "@/components/SponsorLookup";
+import CoverLetter from "@/components/CoverLetter";
+import ResumeAdvisor from "@/components/ResumeAdvisor";
 import StatusBadge, { JOB_STATUSES, STATUS_LABELS } from "@/components/StatusBadge";
 import { JobStatus } from "@/types";
 
@@ -210,6 +212,9 @@ export default function JobDetailPage({
         <TagManager jobId={job.id} initialTags={job.tags ?? []} />
 
         <NotesEditor jobId={job.id} initialNotes={job.notes ?? null} />
+
+        <CoverLetter jobId={job.id} />
+        <ResumeAdvisor jobId={job.id} />
 
         <div className="mt-6 flex items-center gap-3">
           <a
