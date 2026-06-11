@@ -2,7 +2,7 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Job } from "@/types";
+import { Job, ResumeVersionMeta } from "@/types";
 import TagManager from "@/components/TagManager";
 import NotesEditor from "@/components/NotesEditor";
 import SponsorLookup from "@/components/SponsorLookup";
@@ -33,6 +33,8 @@ export default function JobDetailPage({
   const [sponsors, setSponsors] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<JobStatus | null>(null);
+  const [resumeVersions, setResumeVersions] = useState<ResumeVersionMeta[]>([]);
+  const [linkedResumeId, setLinkedResumeId] = useState<number | null>(null);
 
   const handleHide = async () => {
     await fetch(`${API}/api/jobs/${id}/hide`, { method: "PATCH" });
@@ -53,6 +55,15 @@ export default function JobDetailPage({
     });
   };
 
+  const handleResumeVersionChange = async (versionId: number | null) => {
+    setLinkedResumeId(versionId);
+    await fetch(`${API}/api/jobs/${job!.id}/resume-version`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resume_version_id: versionId }),
+    });
+  };
+
   useEffect(() => {
     fetch(`${API}/api/sponsors`).then((r) => r.json()).then((d) => setSponsors(d.sponsors));
   }, []);
@@ -66,6 +77,16 @@ export default function JobDetailPage({
       .then((d) => { setJob(d); setStatus(d.status); })
       .catch((e) => setError(e.message));
   }, [id]);
+
+  useEffect(() => {
+    fetch(`${API}/api/resume/versions`)
+      .then((r) => r.json())
+      .then(setResumeVersions);
+  }, []);
+
+  useEffect(() => {
+    if (job) setLinkedResumeId(job.resume_version_id ?? null);
+  }, [job]);
 
   if (error) {
     return (
@@ -121,6 +142,23 @@ export default function JobDetailPage({
                 {JOB_STATUSES.map((s) => (
                   <option key={s} value={s}>
                     {STATUS_LABELS[s]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-xs text-muted font-medium">Resume</span>
+              <select
+                value={linkedResumeId ?? ""}
+                onChange={(e) =>
+                  handleResumeVersionChange(e.target.value ? Number(e.target.value) : null)
+                }
+                className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Latest</option>
+                {resumeVersions.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.label}
                   </option>
                 ))}
               </select>
