@@ -30,6 +30,7 @@ export interface Job {
   status: JobStatus;
   notes: string | null;
   tags: Tag[];
+  resume_version_id: number | null;
 }
 
 export interface JobsPage {
@@ -49,4 +50,37 @@ export interface ScrapeStatus {
   updated_reposts: number;
   skipped_hidden: number;
   error: string | null;
+}
+
+export interface ModelInfo {
+  id: string;
+  label: string;
+}
+
+export interface MessageOut {
+  id: number;
+  role: "user" | "assistant";
+  content: string;
+  created_at: string;
+}
+
+export interface CoverLetterOut {
+  id: number;
+  job_id: number;
+  resume_version_id: number;
+  content: string;
+  conversation_id: number;
+  messages: MessageOut[];
+  updated_at: string;
+}
+
+export interface AdvisorOut {
+  conversation_id: number;
+  messages: MessageOut[];
+}
+
+export interface ResumeVersionMeta {
+  id: number;
+  label: string;
+  created_at: string;
 }
