@@ -60,6 +60,7 @@ class Message(SQLModel, table=True):
 
 
 class CoverLetter(SQLModel, table=True):
+    __tablename__ = "coverletter"
     id: Optional[int] = Field(default=None, primary_key=True)
     job_id: int = Field(foreign_key="job.id", unique=True)
     resume_version_id: int = Field(foreign_key="resume_version.id")
