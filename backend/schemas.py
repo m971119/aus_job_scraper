@@ -124,3 +124,53 @@ class ResumeVersionCreate(BaseModel):
         if not v.strip():
             raise ValueError("label must not be empty")
         return v.strip()
+
+
+class ResumeVersionLink(BaseModel):
+    resume_version_id: Optional[int] = None
+
+
+class GenerateRequest(BaseModel):
+    model: str
+
+
+class ChatRequest(BaseModel):
+    message: str
+    model: str
+
+
+class CoverLetterUpdate(BaseModel):
+    content: str
+
+
+class MessageOut(BaseModel):
+    id: int
+    role: str
+    content: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class CoverLetterOut(BaseModel):
+    id: int
+    job_id: int
+    resume_version_id: int
+    content: str
+    conversation_id: int
+    messages: list[MessageOut] = []
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class AdvisorOut(BaseModel):
+    conversation_id: int
+    messages: list[MessageOut] = []
+
+    model_config = {"from_attributes": True}
+
+
+class ModelInfo(BaseModel):
+    id: str
+    label: str
