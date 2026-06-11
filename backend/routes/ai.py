@@ -167,6 +167,8 @@ async def chat_cover_letter(job_id: int, body: ChatRequest):
         if not cl:
             raise HTTPException(status_code=404, detail="Generate a cover letter first")
         resume = session.get(ResumeVersion, cl.resume_version_id)
+        if not resume:
+            raise HTTPException(status_code=422, detail="Linked resume version no longer exists")
         system_prompt = cover_letter_system(resume, job)
         history = [
             {"role": m.role, "content": m.content}

@@ -78,8 +78,16 @@ Company: {company}
 """
 
 
+def _fill(template: str, **kwargs: str) -> str:
+    result = template
+    for k, v in kwargs.items():
+        result = result.replace("{" + k + "}", v)
+    return result
+
+
 def cover_letter_system(resume: ResumeVersion, job: Job) -> str:
-    return _COVER_LETTER_BASE.format(
+    return _fill(
+        _COVER_LETTER_BASE,
         resume_text=strip_html(resume.content),
         title=job.title,
         company=job.company or "the company",
@@ -88,7 +96,8 @@ def cover_letter_system(resume: ResumeVersion, job: Job) -> str:
 
 
 def advisor_system(resume: ResumeVersion, job: Job) -> str:
-    return _ADVISOR_BASE.format(
+    return _fill(
+        _ADVISOR_BASE,
         resume_text=strip_html(resume.content),
         title=job.title,
         company=job.company or "the company",
