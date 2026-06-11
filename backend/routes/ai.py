@@ -168,18 +168,21 @@ async def chat_cover_letter(job_id: int, body: ChatRequest):
             raise HTTPException(status_code=404, detail="Generate a cover letter first")
         resume = session.get(ResumeVersion, cl.resume_version_id)
         system_prompt = cover_letter_system(resume, job)
-        history = session.exec(
-            select(Message)
-            .where(Message.conversation_id == cl.conversation_id)
-            .order_by(Message.id)
-        ).all()
+        history = [
+            {"role": m.role, "content": m.content}
+            for m in session.exec(
+                select(Message)
+                .where(Message.conversation_id == cl.conversation_id)
+                .order_by(Message.id)
+            ).all()
+        ]
         session.add(Message(conversation_id=cl.conversation_id, role="user", content=body.message))
         session.commit()
         conv_id = cl.conversation_id
         cl_id = cl.id
 
     messages = [{"role": "system", "content": system_prompt}]
-    messages += [{"role": m.role, "content": m.content} for m in history]
+    messages += history
     messages.append({"role": "user", "content": body.message})
 
     async def event_stream():
@@ -270,15 +273,18 @@ async def chat_advisor(job_id: int, body: ChatRequest):
             session.flush()
             session.commit()
 
-        history = session.exec(
-            select(Message).where(Message.conversation_id == conv.id).order_by(Message.id)
-        ).all()
+        history = [
+            {"role": m.role, "content": m.content}
+            for m in session.exec(
+                select(Message).where(Message.conversation_id == conv.id).order_by(Message.id)
+            ).all()
+        ]
         session.add(Message(conversation_id=conv.id, role="user", content=body.message))
         session.commit()
         conv_id = conv.id
 
     messages = [{"role": "system", "content": system_prompt}]
-    messages += [{"role": m.role, "content": m.content} for m in history]
+    messages += history
     messages.append({"role": "user", "content": body.message})
 
     async def event_stream():
