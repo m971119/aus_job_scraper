@@ -11,8 +11,9 @@ DEFAULT_MODEL = "gpt-4o-mini"
 
 
 def strip_html(html: str) -> str:
-    """Strip HTML tags and collapse whitespace to plain text."""
-    text = re.sub(r"<[^>]+>", " ", html)
+    """Strip HTML tags (including style blocks) and collapse whitespace to plain text."""
+    text = re.sub(r"<style[^>]*>.*?</style>", " ", html, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", " ", text)
     return re.sub(r"\s+", " ", text).strip()
 
 
