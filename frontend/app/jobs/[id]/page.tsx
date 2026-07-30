@@ -134,6 +134,13 @@ export default function JobDetailPage({
                 <SponsorLookup companyName={job.company} sponsors={sponsors} />
               </div>
             )}
+            {job.is_hidden && job.hide_reason && (
+              <p className="text-xs text-muted mt-1">
+                {job.hide_reason === "USER"
+                  ? "Hidden by: You"
+                  : `Hidden by: AI — ${job.hide_reason}`}
+              </p>
+            )}
             <div className="mt-2 flex items-center gap-2">
               <span className="text-xs text-muted font-medium">Status</span>
               <select
