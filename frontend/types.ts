@@ -29,6 +29,7 @@ export interface Job {
   is_hidden: boolean;
   status: JobStatus;
   notes: string | null;
+  hide_reason: string | null;
   tags: Tag[];
   resume_version_id: number | null;
 }
@@ -49,6 +50,15 @@ export interface ScrapeStatus {
   inserted: number;
   updated_reposts: number;
   skipped_hidden: number;
+  error: string | null;
+}
+
+export interface AiFilterStatus {
+  status: string;
+  current_batch: number;
+  total_batches: number;
+  evaluated: number;
+  hidden: number;
   error: string | null;
 }
 
