@@ -27,7 +27,7 @@ _state: dict = {
 }
 
 _FILTER_SYSTEM = """\
-You are filtering job listings for a software engineer seeking backend, frontend, or full-stack roles.
+You are filtering job listings for a software engineer seeking AI, backend, frontend, or full-stack roles.
 
 Decide if this job should be hidden because it clearly does not match.
 
@@ -36,7 +36,8 @@ Hide the job if ANY of these rules apply:
 - Non-software PM: Project Manager or Product Manager for construction, infrastructure, civil, or non-tech domains
 - Non-software engineering discipline: Electrical, Civil, Mechanical, or Structural Engineer
 - Requires ASP.NET as a core or mandatory skill
-- Clearly outside software/web/data/cloud engineering
+- Clearly states that only Permanent Resideent or Citizen can apply
+- Clearly outside AI/software/web/data/cloud engineering
 
 If there is reasonable doubt, do NOT hide — only filter obvious mismatches.
 
