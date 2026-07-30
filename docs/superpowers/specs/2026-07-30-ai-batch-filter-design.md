@@ -1,7 +1,7 @@
 # AI Batch Job Filter — Design Spec
 
 **Date:** 2026-07-30
-**Branch:** feat/resume-cover-letter-advisor
+**Implementation branch:** new branch off `main`, e.g. `feat/ai-batch-filter`
 
 ## Overview
 
