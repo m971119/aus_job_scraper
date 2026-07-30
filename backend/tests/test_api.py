@@ -335,3 +335,23 @@ def test_notes_returned_in_job_list():
     client.patch(f"/api/jobs/{job_id}/notes", json={"notes": "<p>Some notes</p>"})
     resp = client.get("/api/jobs")
     assert resp.json()["items"][0]["notes"] == "<p>Some notes</p>"
+
+
+def test_job_out_includes_hide_reason():
+    with Session(engine) as s:
+        job = Job(
+            seek_url="/j/test-hide-reason",
+            seek_urls="[]",
+            title="Test Role",
+            listed_dates="[]",
+            hide_reason="Electrical engineer",
+            is_hidden=True,
+        )
+        s.add(job)
+        s.commit()
+        s.refresh(job)
+        job_id = job.id
+
+    r = client.get(f"/api/jobs/{job_id}")
+    assert r.status_code == 200
+    assert r.json()["hide_reason"] == "Electrical engineer"

@@ -30,6 +30,7 @@ class Job(SQLModel, table=True):
     is_hidden: bool = Field(default=False)
     status: str = Field(default="SAVED")
     notes: Optional[str] = None
+    hide_reason: Optional[str] = None
     resume_version_id: Optional[int] = Field(default=None, foreign_key="resume_version.id")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

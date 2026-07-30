@@ -84,6 +84,7 @@ class JobOut(BaseModel):
     is_repost: bool
     is_hidden: bool
     notes: Optional[str] = None
+    hide_reason: Optional[str] = None
     status: str = "SAVED"
     tags: list[TagOut] = []
 

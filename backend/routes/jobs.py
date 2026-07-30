@@ -170,5 +170,6 @@ def _to_out(j: Job, session: Session) -> JobOut:
         is_hidden=j.is_hidden,
         status=j.status,
         notes=j.notes,
+        hide_reason=j.hide_reason,
         tags=_get_job_tags(session, j.id),
     )
