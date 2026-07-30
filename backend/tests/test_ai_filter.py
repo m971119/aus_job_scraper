@@ -173,3 +173,36 @@ async def test_run_filter_cancel():
 
     assert call_count == 1  # second batch never ran
     assert ai_filter_service.get_status()["status"] == "cancelled"
+
+
+from fastapi.testclient import TestClient
+from main import app
+
+_client = TestClient(app)
+
+
+def test_filter_status_endpoint_returns_idle():
+    ai_filter_service._state["status"] = "idle"
+    r = _client.get("/api/ai-filter/status")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["status"] == "idle"
+    assert "current_batch" in data
+    assert "total_batches" in data
+    assert "evaluated" in data
+    assert "hidden" in data
+
+
+def test_filter_run_returns_409_when_running():
+    ai_filter_service._state["status"] = "running"
+    r = _client.post("/api/ai-filter/run")
+    assert r.status_code == 409
+    ai_filter_service._state["status"] = "idle"
+
+
+def test_filter_cancel_sets_flag():
+    ai_filter_service._state["cancel_requested"] = False
+    r = _client.post("/api/ai-filter/cancel")
+    assert r.status_code == 200
+    assert ai_filter_service._state["cancel_requested"] is True
+    ai_filter_service._state["cancel_requested"] = False

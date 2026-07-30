@@ -5,6 +5,7 @@ from database import create_db
 from routes import jobs, scrape, tags, sponsors
 from routes.resume import router as resume_router, seed_resume
 from routes.ai import router as ai_router
+from routes.ai_filter import router as ai_filter_router
 import os
 import logging
 
@@ -33,6 +34,7 @@ app.include_router(tags.router, prefix="/api")
 app.include_router(sponsors.router, prefix="/api")
 app.include_router(resume_router, prefix="/api")
 app.include_router(ai_router, prefix="/api")
+app.include_router(ai_filter_router, prefix="/api")
 
 
 @app.get("/health")
