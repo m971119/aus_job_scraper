@@ -58,6 +58,8 @@ Core batch filtering logic:
 ]
 ```
 
+The system prompt must instruct the model to keep `reason` under 60 characters — a short label, not a sentence.
+
 ### Shared status dict (in-memory, same pattern as scraper):
 
 ```python
