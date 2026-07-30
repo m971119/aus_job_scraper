@@ -51,6 +51,13 @@ export default function JobCard({ job, allTags, sponsors, onHide, onUnhide }: Pr
               <SponsorLookup companyName={job.company} sponsors={sponsors} />
             </div>
           )}
+          {job.is_hidden && job.hide_reason && (
+            <p className="text-xs text-muted mt-0.5">
+              {job.hide_reason === "USER"
+                ? "Hidden by: You"
+                : `Hidden by: AI — ${job.hide_reason}`}
+            </p>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <StatusBadge status={job.status} />
