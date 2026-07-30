@@ -175,3 +175,12 @@ class AdvisorOut(BaseModel):
 class ModelInfo(BaseModel):
     id: str
     label: str
+
+
+class AiFilterStatus(BaseModel):
+    status: str
+    current_batch: int = 0
+    total_batches: int = 0
+    evaluated: int = 0
+    hidden: int = 0
+    error: Optional[str] = None
