@@ -355,3 +355,18 @@ def test_job_out_includes_hide_reason():
     r = client.get(f"/api/jobs/{job_id}")
     assert r.status_code == 200
     assert r.json()["hide_reason"] == "Electrical engineer"
+
+
+def test_hide_job_sets_user_reason():
+    with Session(engine) as s:
+        job = Job(seek_url="/j/test-user-hide", seek_urls="[]", title="Some Role", listed_dates="[]")
+        s.add(job)
+        s.commit()
+        s.refresh(job)
+        job_id = job.id
+
+    r = client.patch(f"/api/jobs/{job_id}/hide")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["is_hidden"] is True
+    assert data["hide_reason"] == "USER"

@@ -105,6 +105,7 @@ def hide_job(job_id: int, session: Session = Depends(get_session)):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     job.is_hidden = True
+    job.hide_reason = "USER"
     session.add(job)
     session.commit()
     session.refresh(job)
