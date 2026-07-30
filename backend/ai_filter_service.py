@@ -133,14 +133,14 @@ def _apply_results(output_text: str) -> int:
             except Exception as exc:
                 logger.warning("Could not parse result for job %s: %s", job_id, exc)
                 continue
-            if result.hide:
-                db_job = session.get(Job, job_id)
-                if db_job:
+            db_job = session.get(Job, job_id)
+            if db_job:
+                db_job.ai_filtered_at = now
+                if result.hide:
                     db_job.is_hidden = True
                     db_job.hide_reason = (result.reason or "AI filtered")[:60]
-                    db_job.ai_filtered_at = now
-                    session.add(db_job)
                     hidden += 1
+                session.add(db_job)
         session.commit()
     return hidden
 
