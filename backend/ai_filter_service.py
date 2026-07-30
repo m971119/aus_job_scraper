@@ -13,7 +13,7 @@ from models import Job
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "gpt-5.4-mini"
+DEFAULT_MODEL = "gpt-4o-mini"
 _STATE_FILE = pathlib.Path("data/ai_filter_batch.json")
 
 _client = AsyncOpenAI()
@@ -159,8 +159,11 @@ async def _poll_and_apply(batch_id: str, total_jobs: int) -> None:
             _state["error"] = f"Batch {batch.status}"
             return
 
-    output = await _client.files.content(batch.output_file_id)
-    _state["hidden"] = _apply_results(output.text)
+    if batch.output_file_id:
+        output = await _client.files.content(batch.output_file_id)
+        _state["hidden"] = _apply_results(output.text)
+    else:
+        logger.warning("Batch completed with no output file — all requests may have failed")
     _state["completed"] = total_jobs
     _state["status"] = "done"
 
@@ -192,8 +195,11 @@ async def recover_if_needed() -> None:
             "error": None,
             "cancel_requested": False,
         })
-        output = await _client.files.content(batch.output_file_id)
-        _state["hidden"] = _apply_results(output.text)
+        if batch.output_file_id:
+            output = await _client.files.content(batch.output_file_id)
+            _state["hidden"] = _apply_results(output.text)
+        else:
+            logger.warning("Batch %s completed with no output file", batch_id)
         _state["status"] = "done"
 
     elif batch.status in ("validating", "in_progress", "finalizing"):
