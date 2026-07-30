@@ -1,30 +1,27 @@
+import asyncio
+import io
 import json
 import logging
-import litellm
 from pydantic import BaseModel
+from openai import AsyncOpenAI
 from sqlmodel import Session, select
 
 from ai_config import strip_html
 from database import engine
 from models import Job
 
-
-class FilterDecision(BaseModel):
-    id: int
-    hide: bool
-    reason: str = ""
-
 logger = logging.getLogger(__name__)
 
-BATCH_SIZE = 20
 DEFAULT_MODEL = "gpt-4o-mini"
 
+_client = AsyncOpenAI()
+
 _state: dict = {
-    "status": "idle",
-    "current_batch": 0,
-    "total_batches": 0,
-    "evaluated": 0,
+    "status": "idle",       # idle | uploading | submitted | done | error | cancelled
+    "total_jobs": 0,
+    "completed": 0,
     "hidden": 0,
+    "batch_id": None,
     "error": None,
     "cancel_requested": False,
 }
@@ -32,9 +29,9 @@ _state: dict = {
 _FILTER_SYSTEM = """\
 You are filtering job listings for a software engineer seeking backend, frontend, or full-stack roles.
 
-For each job, decide if it should be hidden because it clearly does not match.
+Decide if this job should be hidden because it clearly does not match.
 
-Hide a job if ANY of these rules apply:
+Hide the job if ANY of these rules apply:
 - Leadership-only role: Principal Engineer, Engineering Lead/Manager, VP/Director of Engineering
 - Non-software PM: Project Manager or Product Manager for construction, infrastructure, civil, or non-tech domains
 - Non-software engineering discipline: Electrical, Civil, Mechanical, or Structural Engineer
@@ -43,9 +40,14 @@ Hide a job if ANY of these rules apply:
 
 If there is reasonable doubt, do NOT hide — only filter obvious mismatches.
 
-Return ONLY a JSON array, no markdown, no other text. Each element must have exactly these keys:
-{"id": <int>, "hide": <bool>, "reason": "<max 60 chars, empty string if hide is false>"}
+Return ONLY a JSON object, no markdown, no other text:
+{"hide": <bool>, "reason": "<max 60 chars, empty string if not hiding>"}
 """
+
+
+class FilterResult(BaseModel):
+    hide: bool
+    reason: str = ""
 
 
 def get_status() -> dict:
@@ -54,30 +56,43 @@ def get_status() -> dict:
 
 def _reset() -> None:
     _state.update({
-        "status": "running",
-        "current_batch": 0,
-        "total_batches": 0,
-        "evaluated": 0,
+        "status": "uploading",
+        "total_jobs": 0,
+        "completed": 0,
         "hidden": 0,
+        "batch_id": None,
         "error": None,
         "cancel_requested": False,
     })
 
 
-def _build_batch_payload(jobs: list[Job]) -> list[dict]:
-    return [
-        {"id": job.id, "title": job.title, "description": strip_html(job.description or "")[:500]}
-        for job in jobs
-    ]
+def _build_jsonl(jobs: list[Job], model: str) -> bytes:
+    lines = []
+    for job in jobs:
+        desc = strip_html(job.description or "")
+        lines.append(json.dumps({
+            "custom_id": f"job-{job.id}",
+            "method": "POST",
+            "url": "/v1/chat/completions",
+            "body": {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": _FILTER_SYSTEM},
+                    {"role": "user", "content": f"Title: {job.title}\n\nDescription: {desc}"},
+                ],
+                "max_tokens": 100,
+            },
+        }))
+    return "\n".join(lines).encode()
 
 
-def _parse_response(content: str) -> list[FilterDecision]:
-    """Extract and validate JSON array from LLM response, stripping any markdown fences."""
+def _parse_json(content: str) -> dict:
+    """Parse JSON from LLM response, stripping any markdown fences."""
     content = content.strip()
     if content.startswith("```"):
         lines = content.split("\n")
         content = "\n".join(lines[1:-1]).strip()
-    return [FilterDecision.model_validate(d) for d in json.loads(content)]
+    return json.loads(content)
 
 
 async def run_filter(model: str = DEFAULT_MODEL) -> None:
@@ -90,54 +105,67 @@ async def run_filter(model: str = DEFAULT_MODEL) -> None:
             _state["status"] = "done"
             return
 
-        batches = [jobs[i:i + BATCH_SIZE] for i in range(0, len(jobs), BATCH_SIZE)]
-        _state["total_batches"] = len(batches)
+        _state["total_jobs"] = len(jobs)
 
-        for batch_idx, batch in enumerate(batches):
+        file_obj = await _client.files.create(
+            file=("filter.jsonl", io.BytesIO(_build_jsonl(jobs, model))),
+            purpose="batch",
+        )
+
+        batch = await _client.batches.create(
+            input_file_id=file_obj.id,
+            endpoint="/v1/chat/completions",
+            completion_window="24h",
+        )
+        _state["batch_id"] = batch.id
+        _state["status"] = "submitted"
+
+        while True:
             if _state["cancel_requested"]:
+                await _client.batches.cancel(batch.id)
                 _state["status"] = "cancelled"
                 return
 
-            _state["current_batch"] = batch_idx + 1
-            payload = _build_batch_payload(batch)
+            await asyncio.sleep(10)
+            batch = await _client.batches.retrieve(batch.id)
 
-            try:
-                response = await litellm.acompletion(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": _FILTER_SYSTEM},
-                        {"role": "user", "content": json.dumps(payload)},
-                    ],
-                )
-                content = response.choices[0].message.content
-            except Exception as exc:
-                logger.error("Batch %d LLM call failed: %s", batch_idx + 1, exc)
+            if batch.request_counts:
+                _state["completed"] = batch.request_counts.completed
+
+            if batch.status == "completed":
+                break
+            if batch.status in ("failed", "expired", "cancelled"):
                 _state["status"] = "error"
-                _state["error"] = str(exc)
+                _state["error"] = f"Batch {batch.status}"
                 return
 
-            try:
-                decisions = _parse_response(content)
-            except Exception as exc:
-                logger.error("Batch %d JSON parse failed: %s", batch_idx + 1, exc)
-                _state["evaluated"] += len(batch)
-                continue
+        output = await _client.files.content(batch.output_file_id)
 
-            hide_map = {d.id: d for d in decisions if d.hide}
+        with Session(engine) as session:
+            for line in output.text.strip().split("\n"):
+                if not line:
+                    continue
+                row = json.loads(line)
+                if row.get("error"):
+                    logger.warning("Request %s failed: %s", row.get("custom_id"), row["error"])
+                    continue
+                job_id = int(row["custom_id"][4:])  # strip "job-" prefix
+                try:
+                    content = row["response"]["body"]["choices"][0]["message"]["content"]
+                    result = FilterResult.model_validate(_parse_json(content))
+                except Exception as exc:
+                    logger.warning("Could not parse result for job %s: %s", job_id, exc)
+                    continue
+                if result.hide:
+                    db_job = session.get(Job, job_id)
+                    if db_job:
+                        db_job.is_hidden = True
+                        db_job.hide_reason = (result.reason or "AI filtered")[:60]
+                        session.add(db_job)
+                        _state["hidden"] += 1
+            session.commit()
 
-            with Session(engine) as session:
-                for job in batch:
-                    if job.id in hide_map:
-                        db_job = session.get(Job, job.id)
-                        if db_job:
-                            db_job.is_hidden = True
-                            db_job.hide_reason = (hide_map[job.id].reason or "AI filtered")[:60]
-                            session.add(db_job)
-                            _state["hidden"] += 1
-                session.commit()
-
-            _state["evaluated"] += len(batch)
-
+        _state["completed"] = len(jobs)
         _state["status"] = "done"
 
     except Exception as exc:

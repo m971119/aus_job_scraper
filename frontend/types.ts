@@ -55,10 +55,10 @@ export interface ScrapeStatus {
 
 export interface AiFilterStatus {
   status: string;
-  current_batch: number;
-  total_batches: number;
-  evaluated: number;
+  total_jobs: number;
+  completed: number;
   hidden: number;
+  batch_id: string | null;
   error: string | null;
 }
 

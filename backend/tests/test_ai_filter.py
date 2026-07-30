@@ -24,50 +24,89 @@ def _make_job(seek_url: str, title: str, description: str = "", is_hidden: bool 
         return job
 
 
-def test_parse_response_plain_json():
-    content = '[{"id": 1, "hide": true, "reason": "Civil engineer"}]'
-    result = ai_filter_service._parse_response(content)
-    assert len(result) == 1
-    assert result[0].id == 1
-    assert result[0].hide is True
-    assert result[0].reason == "Civil engineer"
+def _make_output_line(custom_id: str, content: str) -> str:
+    return json.dumps({
+        "custom_id": custom_id,
+        "response": {
+            "body": {
+                "choices": [{"message": {"content": content}}]
+            }
+        },
+    })
 
 
-def test_parse_response_strips_markdown_fences():
-    content = '```json\n[{"id": 2, "hide": false, "reason": ""}]\n```'
-    result = ai_filter_service._parse_response(content)
-    assert len(result) == 1
-    assert result[0].id == 2
-    assert result[0].hide is False
+def _make_mock_client(jobs: list[Job], results: dict[int, dict]) -> MagicMock:
+    """Build a fully-mocked AsyncOpenAI client.
+
+    results: mapping of job_id → {"hide": bool, "reason": str}
+    """
+    client = MagicMock()
+
+    # files.create
+    file_obj = MagicMock()
+    file_obj.id = "file-123"
+    client.files.create = AsyncMock(return_value=file_obj)
+
+    # files.content
+    output_lines = "\n".join(
+        _make_output_line(f"job-{job.id}", json.dumps(results.get(job.id, {"hide": False, "reason": ""})))
+        for job in jobs
+    )
+    file_content = MagicMock()
+    file_content.text = output_lines
+    client.files.content = AsyncMock(return_value=file_content)
+
+    # batches.create
+    batch = MagicMock()
+    batch.id = "batch-456"
+    batch.status = "completed"
+    batch.output_file_id = "file-out-789"
+    batch.request_counts = MagicMock(completed=len(jobs))
+    client.batches.create = AsyncMock(return_value=batch)
+
+    # batches.retrieve — return completed immediately
+    client.batches.retrieve = AsyncMock(return_value=batch)
+
+    return client
 
 
-def test_parse_response_defaults_missing_reason():
-    content = '[{"id": 3, "hide": true}]'
-    result = ai_filter_service._parse_response(content)
-    assert result[0].reason == ""
+# ---- _build_jsonl ----
+
+def test_build_jsonl_includes_full_description():
+    job = Job(id=1, seek_url="/j/x", title="Engineer", description="<p>Python dev</p>")
+    data = json.loads(ai_filter_service._build_jsonl([job], "gpt-4o-mini").split(b"\n")[0])
+    assert data["custom_id"] == "job-1"
+    user_msg = data["body"]["messages"][1]["content"]
+    assert "Python dev" in user_msg
+    assert "<p>" not in user_msg  # HTML stripped
 
 
-def test_build_batch_payload_truncates_description():
-    job = Job(id=99, seek_url="/j/x", title="Engineer", description="x" * 600)
-    payload = ai_filter_service._build_batch_payload([job])
-    assert len(payload[0]["description"]) == 500
+def test_build_jsonl_handles_none_description():
+    job = Job(id=2, seek_url="/j/y", title="Dev", description=None)
+    data = json.loads(ai_filter_service._build_jsonl([job], "gpt-4o-mini").split(b"\n")[0])
+    assert "Description: \n" in data["body"]["messages"][1]["content"] or "Description:" in data["body"]["messages"][1]["content"]
 
 
-def test_build_batch_payload_handles_none_description():
-    job = Job(id=98, seek_url="/j/y", title="Dev", description=None)
-    payload = ai_filter_service._build_batch_payload([job])
-    assert payload[0]["description"] == ""
+# ---- _parse_json ----
 
+def test_parse_json_plain():
+    result = ai_filter_service._parse_json('{"hide": true, "reason": "Civil engineer"}')
+    assert result == {"hide": True, "reason": "Civil engineer"}
+
+
+def test_parse_json_strips_markdown_fences():
+    content = '```json\n{"hide": false, "reason": ""}\n```'
+    result = ai_filter_service._parse_json(content)
+    assert result == {"hide": False, "reason": ""}
+
+
+# ---- run_filter ----
 
 async def test_run_filter_hides_matching_job():
-    job = _make_job("/j/civil-test", "Civil Engineer", "Build bridges and roads")
+    job = _make_job("/j/civil-batch", "Civil Engineer", "Build bridges")
+    mock_client = _make_mock_client([job], {job.id: {"hide": True, "reason": "Civil engineering role"}})
 
-    mock_resp = MagicMock()
-    mock_resp.choices[0].message.content = json.dumps([
-        {"id": job.id, "hide": True, "reason": "Civil engineering role"}
-    ])
-
-    with patch("ai_filter_service.litellm.acompletion", new=AsyncMock(return_value=mock_resp)):
+    with patch("ai_filter_service._client", mock_client):
         await ai_filter_service.run_filter()
 
     with Session(engine) as s:
@@ -81,14 +120,10 @@ async def test_run_filter_hides_matching_job():
 
 
 async def test_run_filter_keeps_non_matching_job():
-    job = _make_job("/j/python-dev", "Senior Python Developer", "FastAPI microservices")
+    job = _make_job("/j/python-batch", "Senior Python Developer", "FastAPI microservices")
+    mock_client = _make_mock_client([job], {job.id: {"hide": False, "reason": ""}})
 
-    mock_resp = MagicMock()
-    mock_resp.choices[0].message.content = json.dumps([
-        {"id": job.id, "hide": False, "reason": ""}
-    ])
-
-    with patch("ai_filter_service.litellm.acompletion", new=AsyncMock(return_value=mock_resp)):
+    with patch("ai_filter_service._client", mock_client):
         await ai_filter_service.run_filter()
 
     with Session(engine) as s:
@@ -98,33 +133,26 @@ async def test_run_filter_keeps_non_matching_job():
 
 
 async def test_run_filter_skips_already_hidden_jobs():
-    job = _make_job("/j/already-hidden", "Electrical Engineer", "High voltage", is_hidden=True)
+    hidden_job = _make_job("/j/already-hidden-batch", "Electrical Engineer", "High voltage", is_hidden=True)
+    visible_job = _make_job("/j/visible-batch", "Python Dev", "Django")
+    mock_client = _make_mock_client([visible_job], {visible_job.id: {"hide": False, "reason": ""}})
 
-    mock_resp = MagicMock()
-    mock_resp.choices[0].message.content = json.dumps([])
-
-    with patch("ai_filter_service.litellm.acompletion", new=AsyncMock(return_value=mock_resp)) as mock_llm:
+    with patch("ai_filter_service._client", mock_client):
         await ai_filter_service.run_filter()
 
-    # Already-hidden job should not appear in any batch sent to the LLM
-    all_ids_sent = []
-    for call in mock_llm.call_args_list:
-        user_msg = call.kwargs["messages"][-1]["content"]
-        batch = json.loads(user_msg)
-        all_ids_sent.extend(item["id"] for item in batch)
-    assert job.id not in all_ids_sent
+    # The JSONL sent to OpenAI should not contain the hidden job
+    call_args = mock_client.files.create.call_args
+    jsonl_bytes = call_args[1]["file"][1].read()
+    ids_sent = [json.loads(line)["custom_id"] for line in jsonl_bytes.decode().strip().split("\n")]
+    assert f"job-{hidden_job.id}" not in ids_sent
 
 
 async def test_run_filter_truncates_reason_to_60_chars():
-    job = _make_job("/j/asp-net", "ASP.NET Developer", "ASP.NET MVC required")
-
+    job = _make_job("/j/long-reason-batch", "ASP.NET Developer", "ASP.NET MVC required")
     long_reason = "A" * 80
-    mock_resp = MagicMock()
-    mock_resp.choices[0].message.content = json.dumps([
-        {"id": job.id, "hide": True, "reason": long_reason}
-    ])
+    mock_client = _make_mock_client([job], {job.id: {"hide": True, "reason": long_reason}})
 
-    with patch("ai_filter_service.litellm.acompletion", new=AsyncMock(return_value=mock_resp)):
+    with patch("ai_filter_service._client", mock_client):
         await ai_filter_service.run_filter()
 
     with Session(engine) as s:
@@ -133,26 +161,32 @@ async def test_run_filter_truncates_reason_to_60_chars():
         assert len(updated.hide_reason) <= 60
 
 
-async def test_run_filter_continues_after_bad_json_batch():
-    job1 = _make_job("/j/bad-json", "PM Construction", "Build roads")
-    job2 = _make_job("/j/good-json", "VP Engineering", "Lead 50 engineers")
+async def test_run_filter_skips_bad_json_line():
+    job1 = _make_job("/j/bad-json-batch", "PM Construction", "Build roads")
+    job2 = _make_job("/j/good-json-batch", "VP Engineering", "Lead 50 engineers")
 
-    call_count = 0
+    # Manually craft output with one bad line
+    bad_content = "NOT VALID JSON {{{"
+    bad_response = {"custom_id": f"job-{job1.id}", "response": {"body": {"choices": [{"message": {"content": bad_content}}]}}}
+    bad_line = json.dumps(bad_response)
+    good_line = _make_output_line(f"job-{job2.id}", json.dumps({"hide": True, "reason": "Leadership role"}))
 
-    async def mock_llm(**kwargs):
-        nonlocal call_count
-        call_count += 1
-        mock_resp = MagicMock()
-        if call_count == 1:
-            mock_resp.choices[0].message.content = "NOT VALID JSON {{{"
-        else:
-            mock_resp.choices[0].message.content = json.dumps([
-                {"id": job2.id, "hide": True, "reason": "Leadership role"}
-            ])
-        return mock_resp
+    file_content = MagicMock()
+    file_content.text = f"{bad_line}\n{good_line}"
 
-    with patch("ai_filter_service.litellm.acompletion", new=mock_llm), \
-         patch("ai_filter_service.BATCH_SIZE", 1):
+    mock_client = _make_mock_client([job1, job2], {})
+    mock_client.files.content = AsyncMock(return_value=file_content)
+
+    # Also update batch to say 2 jobs
+    batch = MagicMock()
+    batch.id = "batch-456"
+    batch.status = "completed"
+    batch.output_file_id = "file-out-789"
+    batch.request_counts = MagicMock(completed=2)
+    mock_client.batches.create = AsyncMock(return_value=batch)
+    mock_client.batches.retrieve = AsyncMock(return_value=batch)
+
+    with patch("ai_filter_service._client", mock_client):
         await ai_filter_service.run_filter()
 
     with Session(engine) as s:
@@ -163,57 +197,86 @@ async def test_run_filter_continues_after_bad_json_batch():
 
 
 async def test_run_filter_cancel():
-    # Two jobs, BATCH_SIZE=1 so there are two batches.
-    # After the first batch the mock sets cancel_requested so the second batch is skipped.
-    _make_job("/j/cancel-a", "Software Engineer A", "Python")
-    _make_job("/j/cancel-b", "Software Engineer B", "JavaScript")
+    job = _make_job("/j/cancel-batch", "Software Engineer", "Python")
+    mock_client = _make_mock_client([job], {})
 
-    call_count = 0
+    # Make the batch stay "in_progress" so the cancel path triggers
+    in_progress_batch = MagicMock()
+    in_progress_batch.id = "batch-cancel"
+    in_progress_batch.status = "in_progress"
+    in_progress_batch.output_file_id = None
+    in_progress_batch.request_counts = MagicMock(completed=0)
+    mock_client.batches.create = AsyncMock(return_value=in_progress_batch)
 
-    async def mock_llm(**kwargs):
-        nonlocal call_count
-        call_count += 1
-        ai_filter_service._state["cancel_requested"] = True  # signal cancel after first batch
-        mock_resp = MagicMock()
-        mock_resp.choices[0].message.content = json.dumps([])
-        return mock_resp
+    retrieve_count = 0
 
-    with patch("ai_filter_service.litellm.acompletion", new=mock_llm), \
-         patch("ai_filter_service.BATCH_SIZE", 1):
+    async def mock_retrieve(batch_id):
+        nonlocal retrieve_count
+        retrieve_count += 1
+        # Signal cancel on first retrieve
+        ai_filter_service._state["cancel_requested"] = True
+        return in_progress_batch
+
+    mock_client.batches.retrieve = mock_retrieve
+    mock_client.batches.cancel = AsyncMock()
+
+    with patch("ai_filter_service._client", mock_client), \
+         patch("asyncio.sleep", new=AsyncMock()):
         await ai_filter_service.run_filter()
 
-    assert call_count == 1  # second batch never ran
     assert ai_filter_service.get_status()["status"] == "cancelled"
+    mock_client.batches.cancel.assert_called_once_with("batch-cancel")
 
+
+async def test_run_filter_empty_jobs():
+    # No visible jobs → status goes to done immediately
+    ai_filter_service._state["status"] = "idle"
+    mock_client = MagicMock()
+
+    with Session(engine) as s:
+        for j in s.exec(ai_filter_service.select(Job).where(Job.is_hidden == False)).all():  # noqa: E712
+            j.is_hidden = True
+            s.add(j)
+        s.commit()
+
+    with patch("ai_filter_service._client", mock_client):
+        await ai_filter_service.run_filter()
+
+    assert ai_filter_service.get_status()["status"] == "done"
+    mock_client.files.create.assert_not_called()
+
+
+# ---- Routes ----
 
 from fastapi.testclient import TestClient
 from main import app
 
-_client = TestClient(app)
+_test_client = TestClient(app)
 
 
 def test_filter_status_endpoint_returns_idle():
     ai_filter_service._state["status"] = "idle"
-    r = _client.get("/api/ai-filter/status")
+    r = _test_client.get("/api/ai-filter/status")
     assert r.status_code == 200
     data = r.json()
     assert data["status"] == "idle"
-    assert "current_batch" in data
-    assert "total_batches" in data
-    assert "evaluated" in data
+    assert "total_jobs" in data
+    assert "completed" in data
     assert "hidden" in data
+    assert "batch_id" in data
 
 
-def test_filter_run_returns_409_when_running():
-    ai_filter_service._state["status"] = "running"
-    r = _client.post("/api/ai-filter/run")
-    assert r.status_code == 409
+def test_filter_run_returns_409_when_active():
+    for active_status in ("uploading", "submitted"):
+        ai_filter_service._state["status"] = active_status
+        r = _test_client.post("/api/ai-filter/run")
+        assert r.status_code == 409
     ai_filter_service._state["status"] = "idle"
 
 
 def test_filter_cancel_sets_flag():
     ai_filter_service._state["cancel_requested"] = False
-    r = _client.post("/api/ai-filter/cancel")
+    r = _test_client.post("/api/ai-filter/cancel")
     assert r.status_code == 200
     assert ai_filter_service._state["cancel_requested"] is True
     ai_filter_service._state["cancel_requested"] = False

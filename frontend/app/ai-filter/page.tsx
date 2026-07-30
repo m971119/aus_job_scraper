@@ -4,6 +4,8 @@ import { AiFilterStatus } from "@/types";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+const ACTIVE_STATUSES = new Set(["uploading", "submitted"]);
+
 export default function AiFilterPage() {
   const [filterStatus, setFilterStatus] = useState<AiFilterStatus | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -26,13 +28,13 @@ export default function AiFilterPage() {
     if (pollRef.current) return;
     pollRef.current = setInterval(async () => {
       const data = await fetchStatus();
-      if (data.status !== "running") stopPolling();
-    }, 1500);
+      if (!ACTIVE_STATUSES.has(data.status)) stopPolling();
+    }, 2000);
   };
 
   useEffect(() => {
     fetchStatus().then((data) => {
-      if (data.status === "running") startPolling();
+      if (ACTIVE_STATUSES.has(data.status)) startPolling();
     });
     return () => stopPolling();
   }, []);
@@ -47,10 +49,10 @@ export default function AiFilterPage() {
     await fetch(`${API}/api/ai-filter/cancel`, { method: "POST" });
   };
 
-  const isRunning = filterStatus?.status === "running";
+  const isActive = ACTIVE_STATUSES.has(filterStatus?.status ?? "");
   const progress =
-    filterStatus && filterStatus.total_batches > 0
-      ? Math.round((filterStatus.current_batch / filterStatus.total_batches) * 100)
+    filterStatus && filterStatus.total_jobs > 0
+      ? Math.round((filterStatus.completed / filterStatus.total_jobs) * 100)
       : 0;
 
   return (
@@ -66,12 +68,12 @@ export default function AiFilterPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={handleRun}
-            disabled={isRunning}
+            disabled={isActive}
             className="bg-secondary text-white text-sm font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isRunning ? "Running..." : "Run Filter"}
+            {isActive ? "Running..." : "Run Filter"}
           </button>
-          {isRunning && (
+          {isActive && (
             <button
               onClick={handleCancel}
               className="text-sm text-muted hover:text-red-500 transition-colors px-3 py-2 rounded-lg hover:bg-red-50"
@@ -83,15 +85,17 @@ export default function AiFilterPage() {
 
         {filterStatus && filterStatus.status !== "idle" && (
           <div className="space-y-3">
-            {isRunning && filterStatus.total_batches > 0 && (
+            {filterStatus.status === "uploading" && (
+              <p className="text-sm text-muted">Uploading jobs to OpenAI...</p>
+            )}
+
+            {filterStatus.status === "submitted" && (
               <div>
                 <div className="flex justify-between text-xs text-muted mb-1.5">
                   <span>
-                    Batch {filterStatus.current_batch} / {filterStatus.total_batches}
+                    {filterStatus.completed} / {filterStatus.total_jobs} processed
                   </span>
-                  <span>
-                    {filterStatus.evaluated} evaluated &mdash; {filterStatus.hidden} hidden
-                  </span>
+                  <span>{filterStatus.hidden} hidden</span>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-2">
                   <div
@@ -99,6 +103,11 @@ export default function AiFilterPage() {
                     style={{ width: `${progress}%` }}
                   />
                 </div>
+                {filterStatus.batch_id && (
+                  <p className="text-xs text-muted mt-1.5">
+                    Batch ID: {filterStatus.batch_id}
+                  </p>
+                )}
               </div>
             )}
 
@@ -107,7 +116,7 @@ export default function AiFilterPage() {
                 Done &mdash;{" "}
                 <span className="font-semibold text-navy">{filterStatus.hidden}</span> jobs hidden
                 out of{" "}
-                <span className="font-semibold text-navy">{filterStatus.evaluated}</span> evaluated.
+                <span className="font-semibold text-navy">{filterStatus.total_jobs}</span> evaluated.
               </p>
             )}
 

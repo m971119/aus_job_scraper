@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 @router.post("/ai-filter/run", status_code=202)
 async def trigger_filter(model: str = "gpt-4o-mini") -> dict:
-    if _state["status"] == "running":
+    if _state["status"] in ("uploading", "submitted"):
         return JSONResponse(status_code=409, content={"detail": "Filter already running"})
     asyncio.create_task(run_filter(model))
     return {"status": "started"}

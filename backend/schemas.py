@@ -179,8 +179,8 @@ class ModelInfo(BaseModel):
 
 class AiFilterStatus(BaseModel):
     status: str
-    current_batch: int = 0
-    total_batches: int = 0
-    evaluated: int = 0
+    total_jobs: int = 0
+    completed: int = 0
     hidden: int = 0
+    batch_id: Optional[str] = None
     error: Optional[str] = None
