@@ -69,9 +69,13 @@ def _reset() -> None:
     })
 
 
-def _save_state(batch_id: str, total_jobs: int) -> None:
+def _save_state(batch_id: str, total_jobs: int, parsed: bool = False) -> None:
     _STATE_FILE.parent.mkdir(exist_ok=True)
-    _STATE_FILE.write_text(json.dumps({"batch_id": batch_id, "total_jobs": total_jobs}))
+    _STATE_FILE.write_text(json.dumps({"batch_id": batch_id, "total_jobs": total_jobs, "parsed": parsed}))
+
+
+def _mark_parsed(batch_id: str, total_jobs: int) -> None:
+    _save_state(batch_id, total_jobs, parsed=True)
 
 
 def _load_state() -> dict | None:
@@ -162,6 +166,7 @@ async def _poll_and_apply(batch_id: str, total_jobs: int) -> None:
     if batch.output_file_id:
         output = await _client.files.content(batch.output_file_id)
         _state["hidden"] = _apply_results(output.text)
+        _mark_parsed(batch_id, total_jobs)
     else:
         logger.warning("Batch completed with no output file — all requests may have failed")
     _state["completed"] = total_jobs
@@ -176,7 +181,18 @@ async def recover_if_needed() -> None:
 
     batch_id = saved["batch_id"]
     total_jobs = saved.get("total_jobs", 0)
-    logger.info("Recovering in-flight batch %s", batch_id)
+
+    if saved.get("parsed"):
+        logger.info("Batch %s already parsed, restoring done status", batch_id)
+        _state.update({
+            "status": "done",
+            "batch_id": batch_id,
+            "total_jobs": total_jobs,
+            "completed": total_jobs,
+        })
+        return
+
+    logger.info("Batch %s not yet parsed, checking status", batch_id)
 
     try:
         batch = await _client.batches.retrieve(batch_id)
@@ -185,7 +201,7 @@ async def recover_if_needed() -> None:
         return
 
     if batch.status == "completed":
-        logger.info("Batch %s already completed, applying results", batch_id)
+        logger.info("Batch %s completed, applying results now", batch_id)
         _state.update({
             "status": "submitted",
             "batch_id": batch_id,
@@ -198,6 +214,7 @@ async def recover_if_needed() -> None:
         if batch.output_file_id:
             output = await _client.files.content(batch.output_file_id)
             _state["hidden"] = _apply_results(output.text)
+            _mark_parsed(batch_id, total_jobs)
         else:
             logger.warning("Batch %s completed with no output file", batch_id)
         _state["status"] = "done"
