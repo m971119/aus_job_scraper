@@ -2,6 +2,7 @@ import asyncio
 import io
 import json
 import logging
+import pathlib
 from pydantic import BaseModel
 from openai import AsyncOpenAI
 from sqlmodel import Session, select
@@ -12,7 +13,8 @@ from models import Job
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "gpt-4o-mini"
+DEFAULT_MODEL = "gpt-5.4-mini"
+_STATE_FILE = pathlib.Path("data/ai_filter_batch.json")
 
 _client = AsyncOpenAI()
 
@@ -67,6 +69,17 @@ def _reset() -> None:
     })
 
 
+def _save_state(batch_id: str, total_jobs: int) -> None:
+    _STATE_FILE.parent.mkdir(exist_ok=True)
+    _STATE_FILE.write_text(json.dumps({"batch_id": batch_id, "total_jobs": total_jobs}))
+
+
+def _load_state() -> dict | None:
+    if _STATE_FILE.exists():
+        return json.loads(_STATE_FILE.read_text())
+    return None
+
+
 def _build_jsonl(jobs: list[Job], model: str) -> bytes:
     lines = []
     for job in jobs:
@@ -96,6 +109,115 @@ def _parse_json(content: str) -> dict:
     return json.loads(content)
 
 
+def _apply_results(output_text: str) -> int:
+    """Parse batch output and hide matched jobs. Returns count of jobs hidden."""
+    hidden = 0
+    with Session(engine) as session:
+        for line in output_text.strip().split("\n"):
+            if not line:
+                continue
+            row = json.loads(line)
+            if row.get("error"):
+                logger.warning("Request %s failed: %s", row.get("custom_id"), row["error"])
+                continue
+            job_id = int(row["custom_id"][4:])  # strip "job-" prefix
+            try:
+                content = row["response"]["body"]["choices"][0]["message"]["content"]
+                result = FilterResult.model_validate(_parse_json(content))
+            except Exception as exc:
+                logger.warning("Could not parse result for job %s: %s", job_id, exc)
+                continue
+            if result.hide:
+                db_job = session.get(Job, job_id)
+                if db_job:
+                    db_job.is_hidden = True
+                    db_job.hide_reason = (result.reason or "AI filtered")[:60]
+                    session.add(db_job)
+                    hidden += 1
+        session.commit()
+    return hidden
+
+
+async def _poll_and_apply(batch_id: str, total_jobs: int) -> None:
+    """Poll an existing batch until completion, then apply results."""
+    while True:
+        if _state["cancel_requested"]:
+            await _client.batches.cancel(batch_id)
+            _state["status"] = "cancelled"
+            return
+
+        await asyncio.sleep(10)
+        batch = await _client.batches.retrieve(batch_id)
+
+        if batch.request_counts:
+            _state["completed"] = batch.request_counts.completed
+
+        if batch.status == "completed":
+            break
+        if batch.status in ("failed", "expired", "cancelled"):
+            _state["status"] = "error"
+            _state["error"] = f"Batch {batch.status}"
+            return
+
+    output = await _client.files.content(batch.output_file_id)
+    _state["hidden"] = _apply_results(output.text)
+    _state["completed"] = total_jobs
+    _state["status"] = "done"
+
+
+async def recover_if_needed() -> None:
+    """On startup, check if a batch was in-flight and resume tracking it."""
+    saved = _load_state()
+    if not saved:
+        return
+
+    batch_id = saved["batch_id"]
+    total_jobs = saved.get("total_jobs", 0)
+    logger.info("Recovering in-flight batch %s", batch_id)
+
+    try:
+        batch = await _client.batches.retrieve(batch_id)
+    except Exception as exc:
+        logger.warning("Could not retrieve batch %s: %s", batch_id, exc)
+        return
+
+    if batch.status == "completed":
+        logger.info("Batch %s already completed, applying results", batch_id)
+        _state.update({
+            "status": "submitted",
+            "batch_id": batch_id,
+            "total_jobs": total_jobs,
+            "completed": total_jobs,
+            "hidden": 0,
+            "error": None,
+            "cancel_requested": False,
+        })
+        output = await _client.files.content(batch.output_file_id)
+        _state["hidden"] = _apply_results(output.text)
+        _state["status"] = "done"
+
+    elif batch.status in ("validating", "in_progress", "finalizing"):
+        logger.info("Batch %s still running, resuming polling", batch_id)
+        _state.update({
+            "status": "submitted",
+            "batch_id": batch_id,
+            "total_jobs": total_jobs,
+            "completed": batch.request_counts.completed if batch.request_counts else 0,
+            "hidden": 0,
+            "error": None,
+            "cancel_requested": False,
+        })
+        asyncio.create_task(_poll_and_apply(batch_id, total_jobs))
+
+    else:
+        logger.info("Batch %s is in terminal state: %s", batch_id, batch.status)
+        _state.update({
+            "status": "error",
+            "error": f"Batch {batch.status}",
+            "batch_id": batch_id,
+        })
+
+
 async def run_filter(model: str = DEFAULT_MODEL) -> None:
     _reset()
     try:
@@ -120,54 +242,9 @@ async def run_filter(model: str = DEFAULT_MODEL) -> None:
         )
         _state["batch_id"] = batch.id
         _state["status"] = "submitted"
+        _save_state(batch.id, len(jobs))
 
-        while True:
-            if _state["cancel_requested"]:
-                await _client.batches.cancel(batch.id)
-                _state["status"] = "cancelled"
-                return
-
-            await asyncio.sleep(10)
-            batch = await _client.batches.retrieve(batch.id)
-
-            if batch.request_counts:
-                _state["completed"] = batch.request_counts.completed
-
-            if batch.status == "completed":
-                break
-            if batch.status in ("failed", "expired", "cancelled"):
-                _state["status"] = "error"
-                _state["error"] = f"Batch {batch.status}"
-                return
-
-        output = await _client.files.content(batch.output_file_id)
-
-        with Session(engine) as session:
-            for line in output.text.strip().split("\n"):
-                if not line:
-                    continue
-                row = json.loads(line)
-                if row.get("error"):
-                    logger.warning("Request %s failed: %s", row.get("custom_id"), row["error"])
-                    continue
-                job_id = int(row["custom_id"][4:])  # strip "job-" prefix
-                try:
-                    content = row["response"]["body"]["choices"][0]["message"]["content"]
-                    result = FilterResult.model_validate(_parse_json(content))
-                except Exception as exc:
-                    logger.warning("Could not parse result for job %s: %s", job_id, exc)
-                    continue
-                if result.hide:
-                    db_job = session.get(Job, job_id)
-                    if db_job:
-                        db_job.is_hidden = True
-                        db_job.hide_reason = (result.reason or "AI filtered")[:60]
-                        session.add(db_job)
-                        _state["hidden"] += 1
-            session.commit()
-
-        _state["completed"] = len(jobs)
-        _state["status"] = "done"
+        await _poll_and_apply(batch.id, len(jobs))
 
     except Exception as exc:
         logger.exception("AI filter failed: %s", exc)

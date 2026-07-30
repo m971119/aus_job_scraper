@@ -6,6 +6,7 @@ from routes import jobs, scrape, tags, sponsors
 from routes.resume import router as resume_router, seed_resume
 from routes.ai import router as ai_router
 from routes.ai_filter import router as ai_filter_router
+from ai_filter_service import recover_if_needed
 import os
 import logging
 
@@ -16,6 +17,7 @@ logging.basicConfig(level=logging.INFO)
 async def lifespan(app: FastAPI):
     create_db()
     seed_resume()
+    await recover_if_needed()
     yield
 
 
