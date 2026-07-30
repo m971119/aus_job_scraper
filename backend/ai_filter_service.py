@@ -13,7 +13,7 @@ from models import Job
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "gpt-4o-mini"
+DEFAULT_MODEL = "gpt-5.4-mini"
 _STATE_FILE = pathlib.Path("data/ai_filter_batch.json")
 
 _client = AsyncOpenAI()
@@ -94,7 +94,7 @@ def _build_jsonl(jobs: list[Job], model: str) -> bytes:
                     {"role": "system", "content": _FILTER_SYSTEM},
                     {"role": "user", "content": f"Title: {job.title}\n\nDescription: {desc}"},
                 ],
-                "max_tokens": 100,
+                "max_completion_tokens": 100,
             },
         }))
     return "\n".join(lines).encode()
