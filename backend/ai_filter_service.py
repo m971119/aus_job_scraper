@@ -1,11 +1,18 @@
 import json
 import logging
 import litellm
+from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from ai_config import strip_html
 from database import engine
 from models import Job
+
+
+class FilterDecision(BaseModel):
+    id: int
+    hide: bool
+    reason: str = ""
 
 logger = logging.getLogger(__name__)
 
@@ -64,13 +71,13 @@ def _build_batch_payload(jobs: list[Job]) -> list[dict]:
     ]
 
 
-def _parse_response(content: str) -> list[dict]:
-    """Extract JSON array from LLM response, stripping any markdown fences."""
+def _parse_response(content: str) -> list[FilterDecision]:
+    """Extract and validate JSON array from LLM response, stripping any markdown fences."""
     content = content.strip()
     if content.startswith("```"):
         lines = content.split("\n")
         content = "\n".join(lines[1:-1]).strip()
-    return json.loads(content)
+    return [FilterDecision.model_validate(d) for d in json.loads(content)]
 
 
 async def run_filter(model: str = DEFAULT_MODEL) -> None:
@@ -116,7 +123,7 @@ async def run_filter(model: str = DEFAULT_MODEL) -> None:
                 _state["evaluated"] += len(batch)
                 continue
 
-            hide_map = {d["id"]: d for d in decisions if d.get("hide")}
+            hide_map = {d.id: d for d in decisions if d.hide}
 
             with Session(engine) as session:
                 for job in batch:
@@ -124,7 +131,7 @@ async def run_filter(model: str = DEFAULT_MODEL) -> None:
                         db_job = session.get(Job, job.id)
                         if db_job:
                             db_job.is_hidden = True
-                            db_job.hide_reason = hide_map[job.id].get("reason", "AI filtered")[:60]
+                            db_job.hide_reason = (hide_map[job.id].reason or "AI filtered")[:60]
                             session.add(db_job)
                             _state["hidden"] += 1
                 session.commit()

@@ -27,13 +27,24 @@ def _make_job(seek_url: str, title: str, description: str = "", is_hidden: bool 
 def test_parse_response_plain_json():
     content = '[{"id": 1, "hide": true, "reason": "Civil engineer"}]'
     result = ai_filter_service._parse_response(content)
-    assert result == [{"id": 1, "hide": True, "reason": "Civil engineer"}]
+    assert len(result) == 1
+    assert result[0].id == 1
+    assert result[0].hide is True
+    assert result[0].reason == "Civil engineer"
 
 
 def test_parse_response_strips_markdown_fences():
     content = '```json\n[{"id": 2, "hide": false, "reason": ""}]\n```'
     result = ai_filter_service._parse_response(content)
-    assert result == [{"id": 2, "hide": False, "reason": ""}]
+    assert len(result) == 1
+    assert result[0].id == 2
+    assert result[0].hide is False
+
+
+def test_parse_response_defaults_missing_reason():
+    content = '[{"id": 3, "hide": true}]'
+    result = ai_filter_service._parse_response(content)
+    assert result[0].reason == ""
 
 
 def test_build_batch_payload_truncates_description():
