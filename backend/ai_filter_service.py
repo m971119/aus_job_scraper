@@ -115,6 +115,8 @@ def _parse_json(content: str) -> dict:
 
 def _apply_results(output_text: str) -> int:
     """Parse batch output and hide matched jobs. Returns count of jobs hidden."""
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
     hidden = 0
     with Session(engine) as session:
         for line in output_text.strip().split("\n"):
@@ -136,6 +138,7 @@ def _apply_results(output_text: str) -> int:
                 if db_job:
                     db_job.is_hidden = True
                     db_job.hide_reason = (result.reason or "AI filtered")[:60]
+                    db_job.ai_filtered_at = now
                     session.add(db_job)
                     hidden += 1
         session.commit()

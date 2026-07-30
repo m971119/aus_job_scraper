@@ -85,6 +85,7 @@ class JobOut(BaseModel):
     is_hidden: bool
     notes: Optional[str] = None
     hide_reason: Optional[str] = None
+    ai_filtered_at: Optional[datetime] = None
     status: str = "SAVED"
     tags: list[TagOut] = []
 
