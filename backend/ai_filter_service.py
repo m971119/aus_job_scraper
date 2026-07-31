@@ -29,7 +29,7 @@ _state: dict = {
 }
 
 _FILTER_SYSTEM = """\
-You are filtering job listings for a software engineer seeking AI, backend, frontend, or full-stack roles.
+You are filtering job listings for a software engineer seeking AI, backend, or full-stack roles.
 
 Decide if this job should be hidden because it clearly does not match.
 
@@ -40,6 +40,8 @@ Hide the job if ANY of these rules apply:
 - Requires ASP.NET as a core or mandatory skill
 - Clearly states that only Permanent Resideent or Citizen can apply
 - Clearly outside AI/software/web/data/cloud engineering
+- Job opportunities only for graduates
+- Short term contract roles
 
 If there is reasonable doubt, do NOT hide — only filter obvious mismatches.
 
