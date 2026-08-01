@@ -253,6 +253,19 @@ def get_advisor(job_id: int, session: Session = Depends(get_session)):
     )
 
 
+@router.delete("/jobs/{job_id}/advisor/messages", status_code=204)
+def clear_advisor_history(job_id: int, session: Session = Depends(get_session)):
+    conv = session.exec(
+        select(Conversation)
+        .where(Conversation.job_id == job_id, Conversation.type == "advisor")
+        .order_by(Conversation.id.desc())
+    ).first()
+    if conv:
+        session.exec(delete(Message).where(Message.conversation_id == conv.id))
+        session.delete(conv)
+        session.commit()
+
+
 @router.post("/jobs/{job_id}/advisor/chat")
 async def chat_advisor(job_id: int, body: ChatRequest):
     with Session(engine) as session:

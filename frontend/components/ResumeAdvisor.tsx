@@ -62,6 +62,11 @@ export default function ResumeAdvisor({ jobId }: Props) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamBuffer]);
 
+  const clearHistory = async () => {
+    await fetch(`${API}/api/jobs/${jobId}/advisor/messages`, { method: "DELETE" });
+    setMessages([]);
+  };
+
   const sendMessage = async (text: string) => {
     if (!text.trim() || streaming) return;
     setError(null);
@@ -114,6 +119,15 @@ export default function ResumeAdvisor({ jobId }: Props) {
 
           <div className="flex items-center gap-2">
             <ModelPicker value={model} onChange={setModel} disabled={streaming} />
+            {messages.length > 0 && (
+              <button
+                onClick={clearHistory}
+                disabled={streaming}
+                className="text-xs text-muted hover:text-red-500 transition-colors disabled:opacity-40"
+              >
+                Clear history
+              </button>
+            )}
           </div>
 
           {messages.length === 0 && (
