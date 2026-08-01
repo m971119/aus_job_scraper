@@ -250,7 +250,7 @@ async def run_filter(model: str = DEFAULT_MODEL) -> None:
     _reset()
     try:
         with Session(engine) as session:
-            jobs = list(session.exec(select(Job).where(Job.is_hidden == False)).all())  # noqa: E712
+            jobs = list(session.exec(select(Job).where(Job.is_hidden == False, Job.ai_filtered_at == None)).all())  # noqa: E712
 
         if not jobs:
             _state["status"] = "done"
