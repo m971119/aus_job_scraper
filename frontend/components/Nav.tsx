@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 export default function Nav() {
   const pathname = usePathname();
   const isActive = (href: string) =>
-    href === "/" ? pathname === "/" || pathname.startsWith("/jobs") : pathname === href;
+    href === "/" ? pathname === "/" || pathname.startsWith("/jobs") : pathname.startsWith(href);
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-10">
@@ -14,6 +14,7 @@ export default function Nav() {
         <div className="flex gap-1">
           {[
             { href: "/", label: "Job Listings" },
+            { href: "/scraper", label: "Scraper" },
             { href: "/applications", label: "Applications" },
             { href: "/resume", label: "Resume" },
             { href: "/ai-filter", label: "AI Filter" },
