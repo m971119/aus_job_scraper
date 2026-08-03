@@ -4,7 +4,7 @@ import os
 import random
 import re
 from datetime import date, timedelta
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 from playwright.async_api import async_playwright
 from schemas import ScrapedJob
 
@@ -132,7 +132,6 @@ async def scrape_seek(
 
 async def scrape_job_url(url: str) -> ScrapedJob:
     """Scrape title, company, location and description from a single Seek job page."""
-    from datetime import date
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
@@ -161,7 +160,6 @@ async def scrape_job_url(url: str) -> ScrapedJob:
         await context.close()
         await browser.close()
 
-    from urllib.parse import urlparse
     path = urlparse(url).path.rstrip("/")
 
     return ScrapedJob(
