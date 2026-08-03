@@ -1,4 +1,5 @@
 import json
+import re
 from typing import Literal, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_
@@ -16,10 +17,16 @@ def get_session():
         yield session
 
 
+def _parse_terms(q: str) -> list[str]:
+    """Split query into terms; quoted phrases are kept intact."""
+    return [m.group(1) or m.group(2) for m in re.finditer(r'"([^"]+)"|(\S+)', q)]
+
+
 @router.get("/jobs", response_model=JobsPage)
 def list_jobs(
     keyword: Optional[str] = Query(None),
     location: Optional[str] = Query(None),
+    company: Optional[str] = Query(None),
     include_tag: Optional[str] = Query(None),
     exclude_tag: Optional[str] = Query(None),
     is_repost: Literal["all", "originals", "reposts"] = Query("all"),
@@ -38,10 +45,15 @@ def list_jobs(
         query = query.where(Job.is_hidden == True)  # noqa: E712
 
     if keyword:
-        kw = f"%{keyword}%"
-        query = query.where(
-            or_(col(Job.title).ilike(kw), col(Job.description).ilike(kw))
-        )
+        for term in _parse_terms(keyword):
+            kw = f"%{term}%"
+            query = query.where(
+                or_(col(Job.title).ilike(kw), col(Job.description).ilike(kw))
+            )
+
+    if company:
+        for term in _parse_terms(company):
+            query = query.where(col(Job.company).ilike(f"%{term}%"))
 
     if location:
         loc = f"%{location}%"

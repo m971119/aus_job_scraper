@@ -17,6 +17,7 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
   const searchParams = useSearchParams();
 
   const [keyword, setKeyword] = useState(searchParams.get("keyword") ?? "");
+  const [company, setCompany] = useState(searchParams.get("company") ?? "");
   const [location, setLocation] = useState(searchParams.get("location") ?? "");
   const [includeTags, setIncludeTags] = useState<string[]>(
     searchParams.get("include_tag")?.split(",").filter(Boolean) ?? []
@@ -39,10 +40,11 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
   const [pageSize, setPageSize] = useState(25);
   const [data, setData] = useState<JobsPage>({ items: [], total: 0, page: 1, page_size: 25 });
 
-  const hasActiveFilters = !!(keyword || location || includeTags.length || excludeTags.length || isRepost !== "all" || sort !== "latest" || visibility !== "visible");
+  const hasActiveFilters = !!(keyword || company || location || includeTags.length || excludeTags.length || isRepost !== "all" || sort !== "latest" || visibility !== "visible");
 
   const resetFilters = useCallback(() => {
     setKeyword("");
+    setCompany("");
     setLocation("");
     setIncludeTags([]);
     setExcludeTags([]);
@@ -67,6 +69,7 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
   useEffect(() => {
     const params = new URLSearchParams();
     if (keyword) params.set("keyword", keyword);
+    if (company) params.set("company", company);
     if (location) params.set("location", location);
     if (includeTags.length) params.set("include_tag", includeTags.join(","));
     if (excludeTags.length) params.set("exclude_tag", excludeTags.join(","));
@@ -80,18 +83,19 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
   const buildParams = useCallback((p: number) => {
     const params = new URLSearchParams({ sort, page: String(p), page_size: String(pageSize) });
     if (keyword) params.set("keyword", keyword);
+    if (company) params.set("company", company);
     if (location) params.set("location", location);
     if (includeTags.length) params.set("include_tag", includeTags.join(","));
     if (excludeTags.length) params.set("exclude_tag", excludeTags.join(","));
     if (isRepost !== "all") params.set("is_repost", isRepost);
     if (visibility !== "visible") params.set("visibility", visibility);
     return params;
-  }, [keyword, location, includeTags, excludeTags, isRepost, visibility, sort, pageSize]);
+  }, [keyword, company, location, includeTags, excludeTags, isRepost, visibility, sort, pageSize]);
 
   // Reset page when filters change (not page itself)
   useEffect(() => {
     setPage(1);
-  }, [keyword, location, includeTags, excludeTags, isRepost, visibility, sort, pageSize, refreshKey]);
+  }, [keyword, company, location, includeTags, excludeTags, isRepost, visibility, sort, pageSize, refreshKey]);
 
   // Single fetch effect — AbortController cancels any in-flight request
   useEffect(() => {
@@ -121,9 +125,16 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
         <div className="flex gap-3">
           <input
             type="text"
-            placeholder="Filter by keyword..."
+            placeholder='Keyword — use "quotes" for exact phrase'
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
+            className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+          />
+          <input
+            type="text"
+            placeholder='Company — use "quotes" for exact phrase'
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
             className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
           />
           <input
