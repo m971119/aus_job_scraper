@@ -128,3 +128,50 @@ async def scrape_seek(
         await context.close()
         await browser.close()
     return results
+
+
+async def scrape_job_url(url: str) -> ScrapedJob:
+    """Scrape title, company, location and description from a single Seek job page."""
+    from datetime import date
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+        )
+        page = await context.new_page()
+        page.set_default_timeout(20000)
+        await page.goto(url, wait_until="domcontentloaded")
+
+        title_el = await page.query_selector("h1[data-automation='job-detail-title']")
+        title = (await title_el.inner_text()).strip() if title_el else "Unknown"
+
+        company_el = await page.query_selector("[data-automation='advertiser-name']")
+        company = (await company_el.inner_text()).strip() if company_el else None
+
+        loc_els = await page.query_selector_all("[data-automation='job-detail-location']")
+        location_text = " ".join([(await e.inner_text()) for e in loc_els])
+        loc = parse_location(location_text) if location_text.strip() else {"state": None, "city": None, "suburb": None}
+
+        salary_el = await page.query_selector("[data-automation='job-detail-salary']")
+        salary_range = (await salary_el.inner_text()).strip() if salary_el else None
+
+        desc_el = await page.query_selector("[data-automation='jobAdDetails']")
+        description = (await desc_el.inner_text()).strip() if desc_el else None
+
+        await context.close()
+        await browser.close()
+
+    from urllib.parse import urlparse
+    path = urlparse(url).path.rstrip("/")
+
+    return ScrapedJob(
+        seek_url=path,
+        title=title,
+        company=company,
+        description=description,
+        state=loc["state"],
+        city=loc["city"],
+        suburb=loc["suburb"],
+        salary_range=salary_range,
+        listed_date=date.today().isoformat(),
+    )
