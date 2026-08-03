@@ -173,7 +173,7 @@ async def import_from_url(
     session: Session = Depends(get_session),
 ):
     parsed = urlparse(req.url)
-    if "seek.com.au" not in parsed.netloc:
+    if "seek.com" not in parsed.netloc:
         raise HTTPException(status_code=422, detail="URL must be a seek.com.au job URL")
 
     path = parsed.path.rstrip("/")
