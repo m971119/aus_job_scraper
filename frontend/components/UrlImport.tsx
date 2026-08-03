@@ -62,7 +62,7 @@ export default function UrlImport() {
         </button>
       </div>
       {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
-      {existingId && (
+      {existingId !== null && (
         <p className="mt-2 text-xs text-muted">
           This job already exists.{" "}
           <a href={`/jobs/${existingId}`} className="text-primary hover:underline">
