@@ -1,13 +1,22 @@
 import asyncio
 import json
 import logging
-from fastapi import APIRouter
+from urllib.parse import urlparse
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy import func
 from sqlmodel import Session, select
 from models import Job
-from schemas import ScrapeRequest, ScrapeStatus
-from scraper import scrape_seek
+from schemas import ScrapeRequest, ScrapeStatus, UrlImportRequest, UrlImportResponse
+from scraper import scrape_seek, scrape_job_url
+
+from database import engine
+
+
+def get_session():
+    with Session(engine) as session:
+        yield session
+
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -156,3 +165,42 @@ def get_scrape_status() -> ScrapeStatus:
 def cancel_scrape() -> dict:
     _state["cancel_requested"] = True
     return {"status": "cancel_requested"}
+
+
+@router.post("/scrape/url", response_model=UrlImportResponse)
+async def import_from_url(
+    req: UrlImportRequest,
+    session: Session = Depends(get_session),
+):
+    parsed = urlparse(req.url)
+    if "seek.com.au" not in parsed.netloc:
+        raise HTTPException(status_code=422, detail="URL must be a seek.com.au job URL")
+
+    path = parsed.path.rstrip("/")
+    existing = session.exec(select(Job).where(Job.seek_url == path)).first()
+    if existing:
+        return UrlImportResponse(exists=True, job_id=existing.id)
+
+    scraped = await scrape_job_url(req.url)
+
+    existing = session.exec(select(Job).where(Job.seek_url == scraped.seek_url)).first()
+    if existing:
+        return UrlImportResponse(exists=True, job_id=existing.id)
+
+    job = Job(
+        seek_url=scraped.seek_url,
+        seek_urls=json.dumps([scraped.seek_url]),
+        title=scraped.title,
+        company=scraped.company,
+        description=scraped.description,
+        state=scraped.state,
+        city=scraped.city,
+        suburb=scraped.suburb,
+        salary_range=scraped.salary_range,
+        listed_dates=json.dumps([scraped.listed_date]),
+        latest_listing_date=scraped.listed_date,
+    )
+    session.add(job)
+    session.commit()
+    session.refresh(job)
+    return UrlImportResponse(exists=False, job_id=job.id)
