@@ -90,6 +90,13 @@ export default function JobDetailPage({
     if (job) setLinkedResumeId(job.resume_version_id ?? null);
   }, [job]);
 
+  useEffect(() => {
+    if (!job) return;
+    const location = [job.suburb, job.city, job.state].filter(Boolean).join(", ");
+    document.title = location ? `${job.title} ● ${location}` : job.title;
+    return () => { document.title = "Job Scraper"; };
+  }, [job]);
+
   if (error) {
     return (
       <main className="max-w-3xl mx-auto px-4 py-10">
