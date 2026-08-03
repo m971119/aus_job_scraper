@@ -125,14 +125,14 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
         <div className="flex gap-3">
           <input
             type="text"
-            placeholder='Keyword — use "quotes" for exact phrase'
+            placeholder='Keyword'
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
           />
           <input
             type="text"
-            placeholder='Company — use "quotes" for exact phrase'
+            placeholder='Company'
             value={company}
             onChange={(e) => setCompany(e.target.value)}
             className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
