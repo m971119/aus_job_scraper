@@ -185,3 +185,12 @@ class AiFilterStatus(BaseModel):
     hidden: int = 0
     batch_id: Optional[str] = None
     error: Optional[str] = None
+
+
+class UrlImportRequest(BaseModel):
+    url: str
+
+
+class UrlImportResponse(BaseModel):
+    exists: bool
+    job_id: int
