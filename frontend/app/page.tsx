@@ -1,8 +1,9 @@
 "use client";
-import { useState, useCallback, useRef, Suspense } from "react";
+import { useState, useCallback, useRef, Suspense, useEffect } from "react";
 import JobList from "@/components/JobList";
 
 export default function HomePage() {
+  useEffect(() => { document.title = "Jobs | Aus Job Scraper"; }, []);
   const [hasFilters, setHasFilters] = useState(false);
   const resetFiltersRef = useRef<() => void>(() => {});
 

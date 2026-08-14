@@ -7,6 +7,7 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const ACTIVE_STATUSES = new Set(["uploading", "submitted"]);
 
 export default function AiFilterPage() {
+  useEffect(() => { document.title = "AI Filter | Aus Job Scraper"; }, []);
   const [filterStatus, setFilterStatus] = useState<AiFilterStatus | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 

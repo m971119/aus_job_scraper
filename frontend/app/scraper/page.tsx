@@ -21,6 +21,7 @@ const IDLE_STATUS: ScrapeStatus = {
 const POLL_INTERVAL = 3;
 
 export default function ScraperPage() {
+  useEffect(() => { document.title = "Scraper | Aus Job Scraper"; }, []);
   const [scrapeStatus, setScrapeStatus] = useState<ScrapeStatus>(IDLE_STATUS);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);

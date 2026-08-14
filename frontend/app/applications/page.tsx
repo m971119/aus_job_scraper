@@ -20,6 +20,7 @@ const TABS: { value: Tab; label: string }[] = [
 ];
 
 export default function ApplicationsPage() {
+  useEffect(() => { document.title = "Applications | Aus Job Scraper"; }, []);
   const [tab, setTab] = useState<Tab>("APPLIED");
   const [page, setPage] = useState(1);
   const [data, setData] = useState<JobsPage>({ items: [], total: 0, page: 1, page_size: PAGE_SIZE });
