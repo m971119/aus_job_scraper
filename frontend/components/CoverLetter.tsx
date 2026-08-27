@@ -129,14 +129,16 @@ export default function CoverLetter({ jobId, company, title, seekUrl }: Props) {
   };
 
   const handleSaveEdit = async () => {
-    await fetch(`${API}/api/jobs/${jobId}/cover-letter`, {
+    const resp = await fetch(`${API}/api/jobs/${jobId}/cover-letter`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content }),
     });
+    if (!resp.ok) setError("Failed to save cover letter");
   };
 
   const handleDownloadPdf = async () => {
+    setError(null);
     if (!cl) return;
     try {
       await openCoverLetterPdf({
@@ -181,7 +183,8 @@ export default function CoverLetter({ jobId, company, title, seekUrl }: Props) {
             {cl && (
               <button
                 onClick={handleDownloadPdf}
-                className="text-xs font-semibold border border-primary text-primary px-3 py-1.5 rounded-lg hover:bg-primary hover:text-white transition-colors"
+                disabled={streaming}
+                className="text-xs font-semibold border border-primary text-primary px-3 py-1.5 rounded-lg hover:bg-primary hover:text-white transition-colors disabled:opacity-40"
               >
                 Download PDF
               </button>

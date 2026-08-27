@@ -110,6 +110,7 @@ export async function openCoverLetterPdf({
   const doc = new DOMParser().parseFromString(resume.content, "text/html");
   const name = doc.querySelector("h1")?.textContent?.trim() ?? "";
   const contactHtml = doc.querySelector(".contact")?.innerHTML ?? "";
+  if (!name) throw new Error("Resume has no name heading — add an <h1> to your resume");
 
   const html = buildCoverLetterHtml({ name, contactHtml, company, title, seekUrl, content });
 

@@ -1,6 +1,6 @@
 # Cover Letter Notes-Style Editor & PDF Export Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Restyle the job detail page's cover letter editor to match the Notes panel's click-to-edit UX, and add a "Download PDF" button that exports the letter as a resume-styled, print-ready document with the candidate's name and contact details.
 
@@ -28,7 +28,7 @@
 - Produces: `openCoverLetterPdf(params: { resumeVersionId: number; company: string | null; title: string; seekUrl: string; content: string }): Promise<void>` — fetches the resume, builds the letter HTML, opens a new tab and calls `window.print()`. Throws an `Error` with a user-facing message if the resume fetch fails or the pop-up is blocked, for the caller (Task 2) to catch and display.
 - Produces (for direct testing): `buildCoverLetterHtml(params: { name: string; contactHtml: string; company: string | null; title: string; seekUrl: string; content: string }): string`
 
-- [ ] **Step 1: Add the `ResumeVersionOut` type**
+- [x] **Step 1: Add the `ResumeVersionOut` type**
 
 In `frontend/types.ts`, after the `ResumeVersionMeta` interface (end of file, currently lines 92-96), add:
 
@@ -41,7 +41,7 @@ export interface ResumeVersionOut {
 }
 ```
 
-- [ ] **Step 2: Create `frontend/lib/coverLetterPdf.ts`**
+- [x] **Step 2: Create `frontend/lib/coverLetterPdf.ts`**
 
 ```typescript
 import { ResumeVersionOut } from "@/types";
@@ -169,12 +169,12 @@ export async function openCoverLetterPdf({
 }
 ```
 
-- [ ] **Step 3: Verify TypeScript compiles**
+- [x] **Step 3: Verify TypeScript compiles**
 
 Run: `cd frontend && npx tsc --noEmit`
 Expected: no errors referencing `types.ts` or `lib/coverLetterPdf.ts`.
 
-- [ ] **Step 4: Sanity-check the HTML builder in the Node REPL**
+- [x] **Step 4: Sanity-check the HTML builder in the Node REPL**
 
 Run:
 ```bash
@@ -208,7 +208,7 @@ Expected: five lines printed, all `true` — confirms company-name escaping in t
 
 If `tsx` isn't available, run `cd frontend && npx --yes tsx -e '...'` (same command) — `npx --yes` will fetch it for this one-off check without adding it as a project dependency.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/types.ts frontend/lib/coverLetterPdf.ts
@@ -226,7 +226,7 @@ git commit -m "feat(cover-letter): add pdf export template utility"
 - Consumes: `openCoverLetterPdf` from `frontend/lib/coverLetterPdf.ts` (Task 1)
 - Produces: `CoverLetter` component now accepts additional `company?: string | null`, `title: string`, and `seekUrl: string` props (used by Task 3)
 
-- [ ] **Step 1: Add the import and new props**
+- [x] **Step 1: Add the import and new props**
 
 In `frontend/components/CoverLetter.tsx`, add near the top imports (after the existing `ModelPicker` import on line 4):
 
@@ -251,7 +251,7 @@ Change the component signature (currently line 35 `export default function Cover
 export default function CoverLetter({ jobId, company, title, seekUrl }: Props) {
 ```
 
-- [ ] **Step 2: Add `editing` state and the PDF download handler**
+- [x] **Step 2: Add `editing` state and the PDF download handler**
 
 Add a new state line next to the existing `open` state (currently line 44 `const [open, setOpen] = useState(false);`):
 
@@ -278,7 +278,7 @@ const handleDownloadPdf = async () => {
 };
 ```
 
-- [ ] **Step 3: Replace the always-visible textarea with a view/edit toggle**
+- [x] **Step 3: Replace the always-visible textarea with a view/edit toggle**
 
 Replace this block (currently lines 163-181):
 
@@ -337,7 +337,7 @@ with:
           )}
 ```
 
-- [ ] **Step 4: Add the Download PDF button**
+- [x] **Step 4: Add the Download PDF button**
 
 Replace the button row (currently lines 148-161):
 
@@ -385,12 +385,12 @@ with:
           </div>
 ```
 
-- [ ] **Step 5: Verify TypeScript compiles**
+- [x] **Step 5: Verify TypeScript compiles**
 
 Run: `cd frontend && npx tsc --noEmit`
 Expected: no errors in `components/CoverLetter.tsx`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add frontend/components/CoverLetter.tsx
@@ -407,7 +407,7 @@ git commit -m "feat(cover-letter): notes-style editor and pdf download button"
 **Interfaces:**
 - Consumes: `CoverLetter` component's `company?: string | null`, `title: string`, `seekUrl: string` props (Task 2)
 
-- [ ] **Step 1: Pass the new props to `CoverLetter`**
+- [x] **Step 1: Pass the new props to `CoverLetter`**
 
 In `frontend/app/jobs/[id]/page.tsx`, change line 230:
 
@@ -426,12 +426,12 @@ to:
         />
 ```
 
-- [ ] **Step 2: Verify the production build succeeds**
+- [x] **Step 2: Verify the production build succeeds**
 
 Run: `cd frontend && npm run build 2>&1 | tail -30`
 Expected: build completes with no type errors.
 
-- [ ] **Step 3: Manual browser verification**
+- [x] **Step 3: Manual browser verification**
 
 Run: `cd frontend && npm run dev` (and ensure the backend is running per `scripts/` for your OS)
 
@@ -442,7 +442,7 @@ In the browser, open a job detail page that has a description (needed for cover 
 4. Click "Download PDF". Confirm a new tab opens showing a print preview with: the resume's name centered at top in the same serif header style, the contact line with working `mailto:`/link styling, a horizontal rule under the contact line, today's date, a "Re:" line with the job title linked to its Seek URL, a salutation using the job's company name (or "Dear Hiring Manager," if the job has no company), the letter body as separate paragraphs, and a "Sincerely," sign-off with the name.
 5. On a job with no linked resume version and no resume ever created, confirm clicking Download PDF shows an error message in the panel rather than a blank/broken print tab (this exercises the `!resp.ok` throw in `openCoverLetterPdf`).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add frontend/app/jobs/\[id\]/page.tsx
