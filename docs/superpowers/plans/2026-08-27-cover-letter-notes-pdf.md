@@ -49,7 +49,11 @@ import { ResumeVersionOut } from "@/types";
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 function escapeHtml(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 interface CoverLetterHtmlParams {
@@ -188,9 +192,19 @@ console.log(html.includes("Dear Acme &amp; Co Hiring Team,"));
 console.log(html.includes("<p>Paragraph one.</p>"));
 console.log(html.includes("&lt;b&gt;tag&lt;/b&gt;"));
 console.log(html.includes(`Re: <a href="/job/12345">Backend Engineer</a>`));
+
+const withQuote = buildCoverLetterHtml({
+  name: "Michelle Lin",
+  contactHtml: "<a href=\"mailto:test@example.com\">test@example.com</a>",
+  company: null,
+  title: "Role",
+  seekUrl: `/job/"><script>alert(1)</script>`,
+  content: "Body.",
+});
+console.log(withQuote.includes(`href="/job/&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;"`));
 '
 ```
-Expected: four lines printed, all `true` — confirms company-name escaping in the salutation, paragraph splitting, content escaping, and the job reference link all work.
+Expected: five lines printed, all `true` — confirms company-name escaping in the salutation, paragraph splitting, content escaping, the job reference link, and that a `"` in `seekUrl` cannot break out of the `href` attribute.
 
 If `tsx` isn't available, run `cd frontend && npx --yes tsx -e '...'` (same command) — `npx --yes` will fetch it for this one-off check without adding it as a project dependency.
 
