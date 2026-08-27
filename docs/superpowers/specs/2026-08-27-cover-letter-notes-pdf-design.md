@@ -56,7 +56,7 @@ cover letter exists (`cl !== null`). On click (`frontend/lib/coverLetterPdf.ts`)
    - Salutation: `Dear {company} Hiring Team,` if the job has a company,
      otherwise `Dear Hiring Manager,`
    - Body: `cl.content` split on blank lines, each paragraph escaped
-     (`&`, `<`, `>`) and wrapped in `<p>`, justified text like the resume
+     (`&`, `<`, `>`, `"`) and wrapped in `<p>`, justified text like the resume
    - Sign-off: `Sincerely,` followed by the parsed name
 4. Open a new window, write the HTML, call `window.print()` — identical
    pattern to the Resume page's existing `handlePrint`, so "export to PDF" is

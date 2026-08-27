@@ -94,3 +94,10 @@ export interface ResumeVersionMeta {
   label: string;
   created_at: string;
 }
+
+export interface ResumeVersionOut {
+  id: number;
+  label: string;
+  content: string;
+  created_at: string;
+}

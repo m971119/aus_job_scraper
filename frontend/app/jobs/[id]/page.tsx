@@ -227,7 +227,12 @@ export default function JobDetailPage({
 
         <NotesEditor jobId={job.id} initialNotes={job.notes ?? null} />
 
-        <CoverLetter jobId={job.id} />
+        <CoverLetter
+          jobId={job.id}
+          company={job.company}
+          title={job.title}
+          seekUrl={job.seek_url}
+        />
         <ResumeAdvisor jobId={job.id} />
 
         <div className="mt-6 flex items-center gap-3">
