@@ -46,7 +46,13 @@ cover letter exists (`cl !== null`). On click (`frontend/lib/coverLetterPdf.ts`)
 3. Build a standalone HTML document reusing the resume's header styling
    (Times New Roman, A4 `@page`, centered name + contact line — same CSS
    values as `resume-updated.html`), plus letter-specific content:
+   - A thin horizontal rule between the contact line and the date, separating
+     the header from the letter body
    - Today's date
+   - A reference line: `Re: {job title}`, with the title linked to the job's
+     Seek URL (`job.seek_url`, used as-is — the app already treats it as a
+     ready-to-use href elsewhere, e.g. the job detail page's "View on Seek"
+     link)
    - Salutation: `Dear {company} Hiring Team,` if the job has a company,
      otherwise `Dear Hiring Manager,`
    - Body: `cl.content` split on blank lines, each paragraph escaped
@@ -64,10 +70,10 @@ state in the panel rather than opening a blank print window.
 - **New**: `frontend/lib/coverLetterPdf.ts` — `buildCoverLetterHtml(...)` and
   `openCoverLetterPdf(...)` (fetch resume, parse, build HTML, open + print)
 - **Modify**: `frontend/components/CoverLetter.tsx` — view/edit toggle,
-  Download PDF button, accepts a new `company?: string` prop (used for the
-  salutation)
-- **Modify**: `frontend/app/jobs/[id]/page.tsx` — pass `company={job.company}`
-  to `<CoverLetter />`
+  Download PDF button, accepts new `company?: string` (salutation), `title:
+  string` and `seekUrl: string` (reference line) props
+- **Modify**: `frontend/app/jobs/[id]/page.tsx` — pass `company={job.company}`,
+  `title={job.title}`, `seekUrl={job.seek_url}` to `<CoverLetter />`
 
 ## Testing
 
