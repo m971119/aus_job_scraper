@@ -3,7 +3,11 @@ import { ResumeVersionOut } from "@/types";
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 function escapeHtml(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 interface CoverLetterHtmlParams {
