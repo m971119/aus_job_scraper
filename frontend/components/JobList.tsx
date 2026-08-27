@@ -206,7 +206,7 @@ export default function JobList({ refreshKey, onFilterStateChange }: Props) {
       {data.items.length === 0 ? (
         <p className="text-muted text-center py-12">No jobs found.</p>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {data.items.map((job) => (
             <JobCard key={job.id} job={job} allTags={allTags} sponsors={sponsors} onHide={handleHide} onUnhide={handleUnhide} />
           ))}
