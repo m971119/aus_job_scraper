@@ -2,11 +2,15 @@
 import { useEffect, useRef, useState } from "react";
 import { CoverLetterOut, MessageOut } from "@/types";
 import ModelPicker from "./ModelPicker";
+import { openCoverLetterPdf } from "@/lib/coverLetterPdf";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 interface Props {
   jobId: number;
+  company?: string | null;
+  title: string;
+  seekUrl: string;
 }
 
 async function readSSE(
@@ -32,7 +36,7 @@ async function readSSE(
   }
 }
 
-export default function CoverLetter({ jobId }: Props) {
+export default function CoverLetter({ jobId, company, title, seekUrl }: Props) {
   const [cl, setCl] = useState<CoverLetterOut | null>(null);
   const [content, setContent] = useState("");
   const [messages, setMessages] = useState<MessageOut[]>([]);
@@ -42,6 +46,7 @@ export default function CoverLetter({ jobId }: Props) {
   const [streamBuffer, setStreamBuffer] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -131,6 +136,21 @@ export default function CoverLetter({ jobId }: Props) {
     });
   };
 
+  const handleDownloadPdf = async () => {
+    if (!cl) return;
+    try {
+      await openCoverLetterPdf({
+        resumeVersionId: cl.resume_version_id,
+        company: company ?? null,
+        title,
+        seekUrl,
+        content,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "PDF export failed");
+    }
+  };
+
   return (
     <div className="mt-6 border-t border-gray-100 pt-5">
       <button
@@ -158,24 +178,41 @@ export default function CoverLetter({ jobId }: Props) {
                 ? "Regenerate"
                 : "Generate"}
             </button>
+            {cl && (
+              <button
+                onClick={handleDownloadPdf}
+                className="text-xs font-semibold border border-primary text-primary px-3 py-1.5 rounded-lg hover:bg-primary hover:text-white transition-colors"
+              >
+                Download PDF
+              </button>
+            )}
           </div>
 
           {(content || streamBuffer) && (
             <>
-              <textarea
-                value={streaming ? streamBuffer : content}
-                onChange={(e) => setContent(e.target.value)}
-                readOnly={streaming}
-                rows={10}
-                className="w-full text-sm border border-gray-200 rounded-lg p-3 font-mono resize-y focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-              {!streaming && (
-                <button
-                  onClick={handleSaveEdit}
-                  className="text-xs text-primary hover:underline"
+              {streaming ? (
+                <div className="px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-sm whitespace-pre-wrap leading-relaxed">
+                  {streamBuffer}
+                </div>
+              ) : editing ? (
+                <textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  onBlur={() => {
+                    handleSaveEdit();
+                    setEditing(false);
+                  }}
+                  rows={10}
+                  autoFocus
+                  className="w-full text-sm border border-primary rounded-lg p-3 resize-y focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              ) : (
+                <div
+                  onClick={() => setEditing(true)}
+                  className="cursor-pointer px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-sm whitespace-pre-wrap leading-relaxed hover:border-primary/40 transition-colors"
                 >
-                  Save edits
-                </button>
+                  {content}
+                </div>
               )}
             </>
           )}
