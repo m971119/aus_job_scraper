@@ -215,7 +215,7 @@ export default function JobDetailPage({
 
         <div className="mt-5 pt-5 border-t border-gray-100">
           {job.description ? (
-            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+            <p className="text-sm text-gray-700 whitespace-pre-wrap break-words leading-relaxed">
               {job.description}
             </p>
           ) : (

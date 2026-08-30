@@ -120,7 +120,7 @@ async def scrape_seek(
                 await page.goto(f"{SEEK_BASE}{job.seek_url}", wait_until="domcontentloaded")
                 desc_el = await page.query_selector("[data-automation='jobAdDetails']")
                 if desc_el:
-                    job.description = (await desc_el.inner_text()).strip()
+                    job.description = (await desc_el.inner_text()).replace("\xa0", " ").strip()
             except Exception:
                 pass
             await asyncio.sleep(random.uniform(1.0, 2.0))
@@ -155,7 +155,7 @@ async def scrape_job_url(url: str) -> ScrapedJob:
         salary_range = (await salary_el.inner_text()).strip() if salary_el else None
 
         desc_el = await page.query_selector("[data-automation='jobAdDetails']")
-        description = (await desc_el.inner_text()).strip() if desc_el else None
+        description = (await desc_el.inner_text()).replace("\xa0", " ").strip() if desc_el else None
 
         await context.close()
         await browser.close()
