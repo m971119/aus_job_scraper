@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import CodeMirror from "@uiw/react-codemirror";
+import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 import { html } from "@codemirror/lang-html";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -93,7 +93,7 @@ export default function ResumeEditor() {
           <CodeMirror
             value={content}
             height="calc(100vh - 113px)"
-            extensions={[html()]}
+            extensions={[html(), EditorView.lineWrapping]}
             onChange={setContent}
             style={{ fontSize: "13px" }}
           />
