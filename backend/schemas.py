@@ -88,6 +88,7 @@ class JobOut(BaseModel):
     ai_filtered_at: Optional[datetime] = None
     status: str = "SAVED"
     tags: list[TagOut] = []
+    resume_version_id: Optional[int] = None
 
     model_config = {"from_attributes": True}
 

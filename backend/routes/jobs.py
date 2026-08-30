@@ -185,4 +185,5 @@ def _to_out(j: Job, session: Session) -> JobOut:
         notes=j.notes,
         hide_reason=j.hide_reason,
         tags=_get_job_tags(session, j.id),
+        resume_version_id=j.resume_version_id,
     )
