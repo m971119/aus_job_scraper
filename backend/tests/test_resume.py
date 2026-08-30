@@ -67,6 +67,23 @@ def test_get_version_not_found():
     assert resp.status_code == 404
 
 
+def test_update_version_in_place():
+    v = client.post("/api/resume/versions", json={"label": "v1", "content": "original"})
+    vid = v.json()["id"]
+    resp = client.put(f"/api/resume/versions/{vid}", json={"content": "edited"})
+    assert resp.status_code == 200
+    assert resp.json()["id"] == vid
+    assert resp.json()["label"] == "v1"
+    assert resp.json()["content"] == "edited"
+    assert client.get(f"/api/resume/versions/{vid}").json()["content"] == "edited"
+    assert len(client.get("/api/resume/versions").json()) == 1
+
+
+def test_update_version_not_found():
+    resp = client.put("/api/resume/versions/99999", json={"content": "x"})
+    assert resp.status_code == 404
+
+
 def test_delete_version():
     client.post("/api/resume/versions", json={"label": "v1", "content": "first"})
     v2 = client.post("/api/resume/versions", json={"label": "v2", "content": "second"})

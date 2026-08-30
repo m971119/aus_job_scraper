@@ -6,7 +6,12 @@ from sqlalchemy import func
 from sqlmodel import Session, select
 from database import engine
 from models import ResumeVersion
-from schemas import ResumeVersionCreate, ResumeVersionMeta, ResumeVersionOut
+from schemas import (
+    ResumeVersionCreate,
+    ResumeVersionMeta,
+    ResumeVersionOut,
+    ResumeVersionUpdate,
+)
 
 router = APIRouter()
 
@@ -55,6 +60,22 @@ def get_version(version_id: int, session: Session = Depends(get_session)):
 @router.post("/resume/versions", response_model=ResumeVersionOut, status_code=201)
 def create_version(body: ResumeVersionCreate, session: Session = Depends(get_session)):
     version = ResumeVersion(label=body.label, content=body.content)
+    session.add(version)
+    session.commit()
+    session.refresh(version)
+    return version
+
+
+@router.put("/resume/versions/{version_id}", response_model=ResumeVersionOut)
+def update_version(
+    version_id: int,
+    body: ResumeVersionUpdate,
+    session: Session = Depends(get_session),
+):
+    version = session.get(ResumeVersion, version_id)
+    if not version:
+        raise HTTPException(status_code=404, detail="Version not found")
+    version.content = body.content
     session.add(version)
     session.commit()
     session.refresh(version)

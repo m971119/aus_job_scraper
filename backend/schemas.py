@@ -129,6 +129,10 @@ class ResumeVersionCreate(BaseModel):
         return v.strip()
 
 
+class ResumeVersionUpdate(BaseModel):
+    content: str
+
+
 class ResumeVersionLink(BaseModel):
     resume_version_id: Optional[int] = None
 

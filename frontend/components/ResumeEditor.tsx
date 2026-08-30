@@ -52,7 +52,25 @@ export default function ResumeEditor() {
     setSelectedId(d.id);
   };
 
-  const handleSave = async () => {
+  const handleSaveInPlace = async () => {
+    if (selectedId === "" || saving) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const resp = await fetch(`${API}/api/resume/versions/${selectedId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      if (!resp.ok) throw new Error(`Save failed: ${resp.status}`);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveAsNew = async () => {
     if (!label.trim() || saving) return;
     setSaving(true);
     setSaveError(null);
@@ -147,26 +165,33 @@ export default function ResumeEditor() {
             </option>
           ))}
         </select>
+        <button
+          onClick={handleSaveInPlace}
+          disabled={selectedId === "" || saving}
+          className="text-sm font-semibold bg-secondary text-white px-4 py-1.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40"
+        >
+          {saving ? "Saving..." : "Save"}
+        </button>
         <div className="flex-1" />
         <input
           type="text"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") handleSave();
+            if (e.key === "Enter") handleSaveAsNew();
           }}
-          placeholder="Version label..."
+          placeholder="New version label..."
           className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 w-48 focus:outline-none focus:ring-2 focus:ring-primary"
         />
         {saveError && (
           <span className="text-xs text-red-500">{saveError}</span>
         )}
         <button
-          onClick={handleSave}
+          onClick={handleSaveAsNew}
           disabled={!label.trim() || saving}
-          className="text-sm font-semibold bg-secondary text-white px-4 py-1.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40"
+          className="text-sm font-semibold border border-secondary text-secondary px-4 py-1.5 rounded-lg hover:bg-secondary hover:text-white transition-colors disabled:opacity-40"
         >
-          {saving ? "Saving..." : "Save"}
+          Save as new
         </button>
         <button
           onClick={handlePrint}
